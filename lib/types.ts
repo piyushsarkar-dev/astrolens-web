@@ -44,6 +44,7 @@ export type Profile = {
   name: string;
   email: string;
   avatar_url: string | null;
+  imgbb_api_key: string | null;
   created_at: string;
   updated_at: string;
 };

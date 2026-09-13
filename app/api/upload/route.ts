@@ -36,9 +36,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unsupported file type' }, { status: 400 });
     }
 
-    const apiKey = process.env.IMGBB_API_KEY;
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('imgbb_api_key')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (profileError || !profileData) {
+      return NextResponse.json({ error: 'Could not load your profile' }, { status: 500 });
+    }
+
+    const apiKey = profileData.imgbb_api_key;
     if (!apiKey) {
-      return NextResponse.json({ error: 'Image hosting not configured' }, { status: 500 });
+      return NextResponse.json({ error: 'No ImgBB API key set. Add one in Settings to upload photos.' }, { status: 400 });
     }
 
     const arrayBuffer = await file.arrayBuffer();

@@ -14,7 +14,7 @@ type AuthState = {
   signUp: (email: string, password: string, name: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
-  updateProfile: (updates: Partial<Pick<Profile, 'name' | 'avatar_url'>>) => Promise<{ error: string | null }>;
+  updateProfile: (updates: Partial<Pick<Profile, 'name' | 'avatar_url' | 'imgbb_api_key'>>) => Promise<{ error: string | null }>;
   changePassword: (newPassword: string) => Promise<{ error: string | null }>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
 };
@@ -121,7 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateProfile = useCallback(
-    async (updates: Partial<Pick<Profile, 'name' | 'avatar_url'>>) => {
+    async (updates: Partial<Pick<Profile, 'name' | 'avatar_url' | 'imgbb_api_key'>>) => {
       if (!user) return { error: 'Not authenticated' };
       const { error } = await supabase
         .from('profiles')
