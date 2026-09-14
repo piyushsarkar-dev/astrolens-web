@@ -1,13 +1,7 @@
-import type { Metadata } from "next";
-import AuthForm from "@/components/Auth/AuthForm";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Sign up — Astro Lens",
-  description: "Create your own Astro Lens photo vault account.",
+const SignupRedirect = () => {
+  redirect("/login?tab=signup");
 };
 
-const SignupPage = () => {
-  return <AuthForm mode="signup" />;
-};
-
-export default SignupPage;
+export default SignupRedirect;

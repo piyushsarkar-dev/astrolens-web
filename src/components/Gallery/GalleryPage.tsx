@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertCircle, KeyRound, Lock, RefreshCw, X } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/Auth/AuthProvider";
 import type { ImageRecord } from "@/lib/types";
 import ImageGrid from "./ImageGrid";
@@ -13,11 +13,34 @@ type GalleryPageProps = {
 };
 
 const GalleryPage = ({ initialImages }: GalleryPageProps) => {
-  const { user, loading: authLoading, hasImgbbKey } = useAuth();
+  const { user, profile, loading: authLoading, hasImgbbKey } = useAuth();
   const [images, setImages] = useState<ImageRecord[]>(initialImages);
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+
+  // When account changes (login / logout / switch user), reload ONLY that
+  // user's photos from the server. Logged out → clear the grid.
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      setImages([]);
+      setSelectedIndex(null);
+      return;
+    }
+    let cancelled = false;
+    setImages([]);
+    setSelectedIndex(null);
+    fetch("/api/images", { cache: "no-store" })
+      .then((res) => res.json())
+      .then((json: { data?: ImageRecord[] } | null) => {
+        if (!cancelled) setImages(json?.data ?? []);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, authLoading]);
 
   const visibleImages = useMemo(
     () => [...images].sort((a, b) => (b.uploadedAt ?? 0) - (a.uploadedAt ?? 0)),
@@ -63,20 +86,23 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
           </p>
 
           <h2 className="font-display text-[28px] leading-[36px] font-bold tracking-[-0.02em] lg:text-4xl lg:leading-[44px]">
-            Photos
+            {user
+              ? `${profile?.display_name || user.user_metadata?.display_name || user.email?.split("@")[0] || "Your"}’s Photos`
+              : "Photos"}
           </h2>
 
           <p className="text-mist text-sm">
-            {visibleImages.length}{" "}
-            {visibleImages.length === 1 ? "photo" : "photos"} · synced with
-            ImgBB
+            {!user
+              ? "Log in to see your private photo vault."
+              : `${visibleImages.length} ${visibleImages.length === 1 ? "photo" : "photos"} · synced with ImgBB`}
           </p>
         </div>
 
         <button
           type="button"
           onClick={syncFromImgbb}
-          disabled={syncing}
+          disabled={syncing || !user || !hasImgbbKey}
+          title={!user ? "Log in first" : !hasImgbbKey ? "Add your ImgBB key in profile first" : "Sync with ImgBB"}
           className="bg-foreground/[0.04] ring-line-subtle hover:bg-foreground/[0.09] inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium ring-1 backdrop-blur transition disabled:opacity-60">
           <RefreshCw
             size={16}
@@ -99,8 +125,8 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
             <Lock size={18} aria-hidden />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="font-display text-base font-semibold">Log in to upload photos</p>
-            <p className="text-mist mt-0.5 text-sm">Each account uploads with its own personal ImgBB API key.</p>
+            <p className="font-display text-base font-semibold">Log in to see your photos</p>
+            <p className="text-mist mt-0.5 text-sm">Your gallery is private — each account only sees its own uploads. Log in or create an account to continue.</p>
           </div>
           <div className="flex items-center gap-2">
             <a href="/login" className="bg-foreground/[0.04] ring-line-subtle hover:bg-foreground/[0.09] rounded-full px-4 py-1.5 text-sm font-medium ring-1 transition">Log in</a>

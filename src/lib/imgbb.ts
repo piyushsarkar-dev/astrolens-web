@@ -156,16 +156,21 @@ export async function uploadImageToImgbb(
 // gallery keeps showing "old" photos. The public ImgBB API v1 only documents
 // the upload endpoint, so this file is the sync source of truth. When ImgBB
 // exposes a list endpoint we merge it in (see syncImages below).
+// Each record carries `ownerId` (Supabase user id) so "/" only shows the
+// logged-in user's own photos. `null` = legacy photo from before accounts.
 // ---------------------------------------------------------------------------
 
-export async function readImages(): Promise<ImageRecord[]> {
+export async function readImages(ownerId?: string | null): Promise<ImageRecord[]> {
+  let images: ImageRecord[] = [];
   try {
     const raw = await fs.readFile(STORE_FILE, "utf8");
     const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as ImageRecord[]) : [];
+    images = Array.isArray(parsed) ? (parsed as ImageRecord[]) : [];
   } catch {
     return [];
   }
+  if (ownerId === undefined) return images;
+  return images.filter((item) => (item.ownerId ?? null) === (ownerId ?? null));
 }
 
 async function writeImages(images: ImageRecord[]): Promise<void> {
@@ -177,20 +182,37 @@ async function writeImages(images: ImageRecord[]): Promise<void> {
   );
 }
 
-export async function addImage(image: ImageRecord): Promise<ImageRecord> {
+export async function addImage(
+  image: ImageRecord,
+  ownerId?: string | null,
+): Promise<ImageRecord> {
+  const owned: ImageRecord =
+    ownerId === undefined ? image : { ...image, ownerId: ownerId ?? null };
   const images = await readImages();
-  const existingIndex = images.findIndex((item) => item.id === image.id);
+  const existingIndex = images.findIndex((item) => item.id === owned.id);
   if (existingIndex >= 0) {
-    images[existingIndex] = image;
+    // Never let one user steal another user's photo record.
+    const existing = images[existingIndex];
+    if (
+      existing.ownerId != null &&
+      owned.ownerId != null &&
+      existing.ownerId !== owned.ownerId
+    ) {
+      return existing;
+    }
+    images[existingIndex] = owned;
   } else {
-    images.unshift(image);
+    images.unshift(owned);
   }
   await writeImages(images);
-  return image;
+  return owned;
 }
 
-export async function getImageById(id: string): Promise<ImageRecord | null> {
-  const images = await readImages();
+export async function getImageById(
+  id: string,
+  ownerId?: string | null,
+): Promise<ImageRecord | null> {
+  const images = await readImages(ownerId);
   const slug = id.toLowerCase();
   return (
     images.find((item) => item.id.toLowerCase() === slug) ||
@@ -209,8 +231,11 @@ export function sortImagesNewestFirst(images: ImageRecord[]): ImageRecord[] {
  * endpoint (the public API v1 only documents upload), it gracefully falls back
  * to the local registry of previously uploaded images.
  */
-export async function syncImages(apiKey?: string): Promise<ImageRecord[]> {
-  const registry = await readImages();
+export async function syncImages(
+  apiKey?: string,
+  ownerId?: string | null,
+): Promise<ImageRecord[]> {
+  const registry = await readImages(ownerId);
   let remote: ImageRecord[] = [];
 
   try {
@@ -231,7 +256,10 @@ export async function syncImages(apiKey?: string): Promise<ImageRecord[]> {
               Boolean(item) && typeof item === "object",
           )
           .map(normalizeImgbbImage)
-          .filter((item) => item.id && item.url);
+          .filter((item) => item.id && item.url)
+          .map((item) =>
+            ownerId === undefined ? item : { ...item, ownerId: ownerId ?? null },
+          );
       }
     }
   } catch {
@@ -246,7 +274,17 @@ export async function syncImages(apiKey?: string): Promise<ImageRecord[]> {
   const merged = [...byId.values()];
 
   if (remote.length > 0 && merged.length !== registry.length) {
-    await writeImages(merged);
+    // Persist merged list without leaking other users' photos:
+    // keep all records of OTHER owners untouched, rewrite only our scope.
+    if (ownerId === undefined) {
+      await writeImages(merged);
+    } else {
+      const all = await readImages();
+      const others = all.filter(
+        (item) => (item.ownerId ?? null) !== (ownerId ?? null),
+      );
+      await writeImages([...merged, ...others]);
+    }
   }
 
   return sortImagesNewestFirst(merged);

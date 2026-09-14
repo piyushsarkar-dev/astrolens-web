@@ -28,7 +28,13 @@ const ALLOWED_IMAGE_MIME_TYPES = new Set([
 
 export async function GET() {
   try {
-    const images = sortImagesNewestFirst(await readImages());
+    // Logged-out visitors see NO photos — login wall.
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ data: [] });
+    }
+    const images = sortImagesNewestFirst(await readImages(user.id));
     return NextResponse.json({ data: images });
   } catch {
     return NextResponse.json(
@@ -92,8 +98,8 @@ export async function POST(request: NextRequest) {
           },
           userKey,
         );
-        await addImage(image);
-        uploaded.push(image);
+        await addImage(image, user.id);
+        uploaded.push({ ...image, ownerId: user.id });
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "upload failed";

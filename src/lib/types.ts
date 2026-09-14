@@ -13,6 +13,8 @@ export type ImageRecord = {
   expiresAt: number | null;
   source: string;
   managed: boolean;
+  /** Supabase auth user id that owns this photo. `null` = legacy photo from before accounts. */
+  ownerId?: string | null;
 };
 
 export type Profile = {

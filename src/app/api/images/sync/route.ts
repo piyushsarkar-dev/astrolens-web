@@ -21,7 +21,7 @@ export async function POST() {
     if (!userKey) {
       return NextResponse.json({ error: IMGBB_KEY_MISSING_ERROR }, { status: 400 });
     }
-    const images = await syncImages(userKey);
+    const images = await syncImages(userKey, user.id);
     return NextResponse.json({ data: images });
   } catch (error) {
     const message =
