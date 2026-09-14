@@ -1,0 +1,180 @@
+"use client";
+
+import { Check, Folder, FolderPlus, Plus, X } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+import type { ImageRecord } from "@/lib/types";
+
+type AddToAlbumModalProps = {
+  image: ImageRecord;
+  onClose: () => void;
+  onUpdateImage: (updated: ImageRecord) => void;
+};
+
+const SUGGESTED_ALBUMS = [
+  "Favorites",
+  "Travel & Trips",
+  "Family & Friends",
+  "Portraits",
+  "Nature & Sky",
+  "Wallpapers",
+];
+
+export const AddToAlbumModal = ({
+  image,
+  onClose,
+  onUpdateImage,
+}: AddToAlbumModalProps) => {
+  const currentAlbums = image.albums || [];
+  const [newAlbumName, setNewAlbumName] = useState("");
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  // Combine suggested albums with any custom albums the photo has
+  const allAvailableAlbums = Array.from(
+    new Set([...currentAlbums, ...SUGGESTED_ALBUMS]),
+  );
+
+  const toggleAlbum = async (albumName: string) => {
+    const exists = currentAlbums.includes(albumName);
+    const updatedAlbums = exists
+      ? currentAlbums.filter((a) => a !== albumName)
+      : [...currentAlbums, albumName];
+
+    setIsUpdating(true);
+    try {
+      const res = await fetch(`/api/images/${encodeURIComponent(image.id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ albums: updatedAlbums }),
+      });
+      if (!res.ok) throw new Error("Failed to update albums.");
+      const json = await res.json();
+      if (json.data) {
+        onUpdateImage(json.data);
+        toast.success(
+          exists
+            ? `Removed from "${albumName}"`
+            : `Added to "${albumName}"!`,
+        );
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error updating album.");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleCreateNewAlbum = async () => {
+    const trimmed = newAlbumName.trim();
+    if (!trimmed) return;
+    if (currentAlbums.includes(trimmed)) {
+      toast.info("Photo is already in this album.");
+      setNewAlbumName("");
+      return;
+    }
+    await toggleAlbum(trimmed);
+    setNewAlbumName("");
+  };
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-150"
+      onClick={onClose}>
+      <div
+        className="w-full max-w-md rounded-3xl bg-[#18191c] border border-white/10 p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-150 text-foreground"
+        onClick={(e) => e.stopPropagation()}>
+        {/* Modal Header */}
+        <div className="flex items-center justify-between border-b border-white/10 pb-4">
+          <div className="flex items-center gap-2.5">
+            <span className="grid size-9 place-items-center rounded-xl bg-sky/15 text-sky">
+              <FolderPlus size={20} />
+            </span>
+            <div>
+              <h3 className="font-display text-base font-semibold text-white">
+                Add to Album
+              </h3>
+              <p className="text-mist text-xs">Organize your photo library</p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid size-8 place-items-center rounded-full text-white/70 hover:bg-white/10 hover:text-white transition cursor-pointer">
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Album List */}
+        <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+          {allAvailableAlbums.map((albumName) => {
+            const isSelected = currentAlbums.includes(albumName);
+            return (
+              <button
+                key={albumName}
+                type="button"
+                disabled={isUpdating}
+                onClick={() => void toggleAlbum(albumName)}
+                className={`flex w-full items-center justify-between rounded-2xl px-4 py-3 text-sm font-medium border transition cursor-pointer ${
+                  isSelected
+                    ? "bg-sky/20 border-sky/40 text-white"
+                    : "bg-white/[0.03] border-white/5 text-white/80 hover:bg-white/[0.07]"
+                }`}>
+                <div className="flex items-center gap-3">
+                  <Folder
+                    size={18}
+                    className={isSelected ? "text-sky" : "text-amber-400"}
+                  />
+                  <span>{albumName}</span>
+                </div>
+
+                <div
+                  className={`grid size-5 place-items-center rounded-full border transition ${
+                    isSelected
+                      ? "bg-sky border-sky text-white"
+                      : "border-white/20 text-transparent"
+                  }`}>
+                  <Check size={12} strokeWidth={3} />
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Create New Album Input */}
+        <div className="pt-2 border-t border-white/10 space-y-2">
+          <p className="text-xs font-semibold text-sky uppercase tracking-wider">
+            Create New Album
+          </p>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={newAlbumName}
+              onChange={(e) => setNewAlbumName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  void handleCreateNewAlbum();
+                }
+              }}
+              placeholder="Album title..."
+              className="flex-1 rounded-xl bg-white/[0.05] border border-white/10 px-3.5 py-2 text-xs text-white placeholder:text-mist focus:outline-none focus:border-sky"
+            />
+
+            <button
+              type="button"
+              onClick={handleCreateNewAlbum}
+              disabled={!newAlbumName.trim() || isUpdating}
+              className="flex items-center gap-1.5 rounded-xl bg-sky px-4 py-2 text-xs font-semibold text-white shadow-md shadow-sky/20 hover:bg-sky/90 transition disabled:opacity-50 cursor-pointer">
+              <Plus size={14} />
+              <span>Create</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};

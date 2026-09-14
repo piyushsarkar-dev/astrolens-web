@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { deleteImageFromImgbb, getImageById, removeImage } from "@/lib/imgbb";
+import {
+  deleteImageFromImgbb,
+  getImageById,
+  removeImage,
+  updateImageRecord,
+} from "@/lib/imgbb";
+import type { ImageRecord } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -82,6 +88,32 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Delete failed.";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: NextRequest, context: RouteContext) {
+  try {
+    const { id } = await context.params;
+    const supabase = await createClient();
+    const auth = await requireUser(supabase);
+    if ("error" in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
+    const body = (await request.json().catch(() => null)) as Partial<ImageRecord> | null;
+    if (!body || typeof body !== "object") {
+      return NextResponse.json({ error: "Invalid request payload." }, { status: 400 });
+    }
+
+    const updated = await updateImageRecord(id, body, auth.user.id);
+    if (!updated) {
+      return NextResponse.json({ error: "Image not found." }, { status: 404 });
+    }
+
+    return NextResponse.json({ data: updated });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Update failed.";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

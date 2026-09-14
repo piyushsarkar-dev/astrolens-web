@@ -1,5 +1,6 @@
 "use client";
 
+import { Heart } from "lucide-react";
 import { useEffect } from "react";
 import { preloadImage } from "@/lib/preloadImage";
 import type { ImageRecord } from "@/lib/types";
@@ -77,6 +78,14 @@ const ImageGrid = ({ images, onSelectImage }: ImageGridProps) => {
             decoding="async"
             className="w-full transition-transform duration-200 will-change-transform group-hover:scale-[1.02]"
           />
+
+          {image.isFavorite && (
+            <span
+              className="absolute top-2.5 left-2.5 z-10 grid size-6 place-items-center rounded-full bg-black/50 backdrop-blur text-rose-500 shadow-md border border-white/10"
+              title="Favorite photo">
+              <Heart size={12} className="fill-rose-500" />
+            </span>
+          )}
 
           <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent p-3 pt-10 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
             <p className="truncate text-sm font-semibold text-white drop-shadow">

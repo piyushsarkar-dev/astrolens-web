@@ -397,6 +397,29 @@ export async function removeImage(
   await writeImages(kept);
 }
 
+export async function updateImageRecord(
+  id: string,
+  patch: Partial<ImageRecord>,
+  ownerId?: string | null,
+): Promise<ImageRecord | null> {
+  const images = await readImages();
+  const index = images.findIndex((item) => item.id.toLowerCase() === id.toLowerCase());
+  if (index < 0) return null;
+  const current = images[index];
+  if (ownerId && current.ownerId && current.ownerId !== ownerId) {
+    return null;
+  }
+  const updated: ImageRecord = {
+    ...current,
+    ...patch,
+    id: current.id,
+    ownerId: current.ownerId,
+  };
+  images[index] = updated;
+  await writeImages(images);
+  return updated;
+}
+
 export function sortImagesNewestFirst(images: ImageRecord[]): ImageRecord[] {
   return [...images].sort((a, b) => (b.uploadedAt ?? 0) - (a.uploadedAt ?? 0));
 }

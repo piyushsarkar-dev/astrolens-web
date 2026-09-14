@@ -1,3 +1,41 @@
+export type ImageExifMetadata = {
+  camera?: string;
+  lens?: string;
+  aperture?: string;
+  shutter?: string;
+  iso?: number;
+  focalLength?: string;
+  colorSpace?: string;
+  flash?: string;
+  meteringMode?: string;
+};
+
+export type ImageLocation = {
+  name?: string;
+  latitude?: number;
+  longitude?: number;
+  country?: string;
+  city?: string;
+};
+
+export type DetectedFace = {
+  id?: string;
+  name: string;
+  confidence?: number;
+  ageRange?: string;
+  expression?: string;
+};
+
+export type ImageEdits = {
+  rotation?: number; // 0, 90, 180, 270
+  flipH?: boolean;
+  flipV?: boolean;
+  brightness?: number; // percentage, default 100
+  contrast?: number; // percentage, default 100
+  saturation?: number; // percentage, default 100
+  filter?: "none" | "grayscale" | "sepia" | "vivid" | "cool" | "warm";
+};
+
 export type ImageRecord = {
   id: string;
   title: string;
@@ -15,6 +53,22 @@ export type ImageRecord = {
   managed: boolean;
   /** Supabase auth user id that owns this photo. `null` = legacy photo from before accounts. */
   ownerId?: string | null;
+  /** Favorite flag */
+  isFavorite?: boolean;
+  /** Associated album names */
+  albums?: string[];
+  /** Search and classification tags */
+  tags?: string[];
+  /** Technical EXIF / camera metadata */
+  metadata?: ImageExifMetadata;
+  /** GPS / location information */
+  location?: ImageLocation;
+  /** OCR extracted text */
+  ocrResult?: string;
+  /** Detected faces / persons */
+  detectedFaces?: DetectedFace[];
+  /** Saved visual edits */
+  edits?: ImageEdits;
 };
 
 export type Profile = {

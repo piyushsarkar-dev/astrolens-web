@@ -144,6 +144,11 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
           onClose={() => setSelectedIndex(null)}
           onNavigate={setSelectedIndex}
           onDelete={handleDelete}
+          onUpdateImage={(updated) => {
+            setAllImages((previous) =>
+              previous.map((item) => (item.id === updated.id ? updated : item)),
+            );
+          }}
         />
       )}
     </section>
