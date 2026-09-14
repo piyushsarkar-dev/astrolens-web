@@ -21,8 +21,8 @@ const Inner = ({ initialMode = "login" }: AuthFormProps) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(
-    params.get("error") === "callback"
-      ? "Confirmation link expired or invalid. Log in or sign up again."
+    params.get("error")
+      ? decodeURIComponent(params.get("error") as string)
       : null,
   );
   const [info, setInfo] = useState<string | null>(
@@ -37,6 +37,15 @@ const Inner = ({ initialMode = "login" }: AuthFormProps) => {
   const homePath = "/" as never;
   const switchMode = (m: AuthMode) => {
     setMode(m); setError(null); setInfo(null); setNeedsConfirm(false);
+  };
+  const startCooldown = (secs: number) => {
+    setCooldown(secs);
+    const t = setInterval(() => {
+      setCooldown((c) => {
+        if (c <= 1) { clearInterval(t); return 0; }
+        return c - 1;
+      });
+    }, 1000);
   };
   const diagnose = async (): Promise<string | null> => {
     // 1) Can the browser reach the Supabase Auth API at all?
@@ -53,6 +62,23 @@ const Inner = ({ initialMode = "login" }: AuthFormProps) => {
       return "Browser could not reach Supabase at all (network blocked, wrong Project URL, project paused, or Brave Shields / ad-blocker blocking supabase.co). Try: disable Brave Shields for localhost, turn off ad-blocker, check internet, and verify the Project URL in Supabase Dashboard.";
     }
     return null;
+  };
+  const signInWithGoogle = async () => {
+    setError(null); setInfo(null);
+    try {
+      const supabase = createClient();
+      const { error: e } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: emailRedirect(),
+          queryParams: { access_type: "offline", prompt: "select_account" },
+        },
+      });
+      if (e) throw e;
+      // Browser redirects to Google — nothing else to do here.
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not start Google login.");
+    }
   };
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -165,11 +191,30 @@ const Inner = ({ initialMode = "login" }: AuthFormProps) => {
               )}
             </div>
           )}
-          <button type="submit" disabled={loading} className="bg-sky inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-sky/90 disabled:opacity-60">
+          <button type="submit" disabled={loading || cooldown > 0} className="bg-sky inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-sky/90 disabled:opacity-60">
             {loading && <Loader2 size={16} className="animate-spin" aria-hidden />}
-            {loading ? "Please wait…" : mode === "signup" ? "Create account" : "Log in"}
+            {cooldown > 0 ? `Wait ${cooldown}s before retrying…` : loading ? "Please wait…" : mode === "signup" ? "Create account" : "Log in"}
           </button>
         </form>
+
+        <div className="my-5 flex items-center gap-3">
+          <span className="ring-line-subtle h-px flex-1 ring-1" aria-hidden />
+          <span className="text-mist text-xs font-medium tracking-wide">OR</span>
+          <span className="ring-line-subtle h-px flex-1 ring-1" aria-hidden />
+        </div>
+
+        <button
+          type="button"
+          onClick={signInWithGoogle}
+          className="bg-foreground/[0.04] ring-line-subtle hover:bg-foreground/[0.09] inline-flex w-full items-center justify-center gap-2.5 rounded-full px-5 py-2.5 text-sm font-semibold ring-1 transition">
+          <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden>
+            <path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z" />
+            <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.31 24 12 24z" />
+            <path fill="#FBBC05" d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z" />
+            <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.09C6.22 6.86 8.87 4.75 12 4.75z" />
+          </svg>
+          Continue with Google
+        </button>
       </div>
     </section>
   );
