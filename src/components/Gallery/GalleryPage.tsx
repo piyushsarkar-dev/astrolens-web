@@ -1,7 +1,8 @@
 "use client";
 
-import { AlertCircle, RefreshCw, X } from "lucide-react";
+import { AlertCircle, KeyRound, Lock, RefreshCw, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
+import { useAuth } from "@/components/Auth/AuthProvider";
 import type { ImageRecord } from "@/lib/types";
 import ImageGrid from "./ImageGrid";
 import Lightbox from "./Lightbox";
@@ -12,6 +13,7 @@ type GalleryPageProps = {
 };
 
 const GalleryPage = ({ initialImages }: GalleryPageProps) => {
+  const { user, loading: authLoading, hasImgbbKey } = useAuth();
   const [images, setImages] = useState<ImageRecord[]>(initialImages);
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,7 +90,37 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
       <UploadSection
         onUploaded={handleUploaded}
         onError={handleError}
+        disabled={authLoading ? true : !user || !hasImgbbKey}
       />
+
+      {!authLoading && !user && (
+        <div className="vault-card flex flex-wrap items-center gap-3 rounded-2xl p-4 text-sm sm:p-6">
+          <span className="bg-sky/15 text-sky ring-line-subtle grid size-10 shrink-0 place-items-center rounded-full ring-1">
+            <Lock size={18} aria-hidden />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="font-display text-base font-semibold">Log in to upload photos</p>
+            <p className="text-mist mt-0.5 text-sm">Each account uploads with its own personal ImgBB API key.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <a href="/login" className="bg-foreground/[0.04] ring-line-subtle hover:bg-foreground/[0.09] rounded-full px-4 py-1.5 text-sm font-medium ring-1 transition">Log in</a>
+            <a href="/signup" className="bg-sky rounded-full px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-sky/90">Sign up</a>
+          </div>
+        </div>
+      )}
+
+      {!authLoading && user && !hasImgbbKey && (
+        <div className="vault-card flex flex-wrap items-center gap-3 rounded-2xl p-4 text-sm sm:p-6">
+          <span className="bg-amber-500/10 text-amber-500 ring-line-subtle grid size-10 shrink-0 place-items-center rounded-full ring-1">
+            <KeyRound size={18} aria-hidden />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="font-display text-base font-semibold">Add your ImgBB API key to enable uploads</p>
+            <p className="text-mist mt-0.5 text-sm">Save your personal key on your profile page — it is free at api.imgbb.com.</p>
+          </div>
+          <a href="/profile" className="bg-sky rounded-full px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-sky/90">Open profile</a>
+        </div>
+      )}
 
       {error && (
         <div

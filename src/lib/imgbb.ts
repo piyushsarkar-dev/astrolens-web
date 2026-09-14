@@ -8,11 +8,19 @@ const IMGBB_MAX_FILE_SIZE = 32 * 1024 * 1024; // 32 MB per ImgBB docs
 const STORE_FILE = path.join(process.cwd(), "data", "images.json");
 
 export const IMGBB_KEY_MISSING_ERROR =
-  "ImgBB API key is not configured. Add IMGBB_API_KEY to your .env.local file " +
-  "(get a key at https://imgbb.com/account/api).";
+  "No ImgBB API key found for your account. Open your Profile page and save your personal ImgBB API key first (get one at https://api.imgbb.com).";
+
+export const IMGBB_LOGIN_REQUIRED_ERROR =
+  "Please log in to upload photos. Each account uses its own personal ImgBB API key.";
 
 export const IMGBB_MAX_FILE_SIZE_ERROR =
   "Image exceeds the 32 MB limit allowed by ImgBB.";
+
+// Legacy server-wide fallback (optional). Per-user profile keys take priority.
+export function getServerFallbackApiKey(): string | null {
+  const key = process.env.IMGBB_API_KEY?.trim();
+  return key || null;
+}
 
 export function getImgbbApiKey(): string {
   const key = process.env.IMGBB_API_KEY?.trim();
@@ -100,8 +108,9 @@ export type UploadFile = {
 
 export async function uploadImageToImgbb(
   file: UploadFile,
+  apiKey?: string,
 ): Promise<ImageRecord> {
-  const key = getImgbbApiKey();
+  const key = apiKey?.trim() || getImgbbApiKey();
 
   if (file.buffer.byteLength > IMGBB_MAX_FILE_SIZE) {
     throw new Error(IMGBB_MAX_FILE_SIZE_ERROR);
@@ -200,12 +209,12 @@ export function sortImagesNewestFirst(images: ImageRecord[]): ImageRecord[] {
  * endpoint (the public API v1 only documents upload), it gracefully falls back
  * to the local registry of previously uploaded images.
  */
-export async function syncImages(): Promise<ImageRecord[]> {
+export async function syncImages(apiKey?: string): Promise<ImageRecord[]> {
   const registry = await readImages();
   let remote: ImageRecord[] = [];
 
   try {
-    const key = getImgbbApiKey();
+    const key = apiKey?.trim() || getServerFallbackApiKey() || getImgbbApiKey();
     const response = await fetch(
       `${IMGBB_API_BASE}/images?key=${encodeURIComponent(key)}`,
       { cache: "no-store" },

@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   addImage,
-  getImgbbApiKey,
+  IMGBB_KEY_MISSING_ERROR,
+  IMGBB_LOGIN_REQUIRED_ERROR,
   readImages,
   sortImagesNewestFirst,
   uploadImageToImgbb,
 } from "@/lib/imgbb";
+import { createClient } from "@/lib/supabase/server";
 import type { ImageRecord } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -38,8 +40,23 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    // Fail fast with a clear message when the server-side key is missing.
-    getImgbbApiKey();
+    // 1) Login required — uploads are per-account.
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: IMGBB_LOGIN_REQUIRED_ERROR }, { status: 401 });
+    }
+
+    // 2) Each user uploads with their OWN ImgBB key saved in their profile.
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("imgbb_api_key")
+      .eq("id", user.id)
+      .maybeSingle();
+    const userKey = (profile?.imgbb_api_key as string | null)?.trim() || null;
+    if (!userKey) {
+      return NextResponse.json({ error: IMGBB_KEY_MISSING_ERROR }, { status: 400 });
+    }
 
     const formData = await request.formData();
     const files = formData
@@ -67,11 +84,14 @@ export async function POST(request: NextRequest) {
 
       try {
         const buffer = Buffer.from(await file.arrayBuffer());
-        const image = await uploadImageToImgbb({
-          buffer,
-          mime,
-          name: filename,
-        });
+        const image = await uploadImageToImgbb(
+          {
+            buffer,
+            mime,
+            name: filename,
+          },
+          userKey,
+        );
         await addImage(image);
         uploaded.push(image);
       } catch (error) {

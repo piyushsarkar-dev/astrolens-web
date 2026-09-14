@@ -5,9 +5,12 @@ create table if not exists public.profiles (
   email text,
   display_name text,
   avatar_url text,
+  imgbb_api_key text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+-- Migration for existing installs (safe to re-run):
+alter table public.profiles add column if not exists imgbb_api_key text;
 alter table public.profiles enable row level security;
 drop policy if exists "profiles_select_own" on public.profiles;
 create policy "profiles_select_own" on public.profiles
