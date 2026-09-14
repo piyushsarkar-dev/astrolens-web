@@ -4,6 +4,7 @@ import { KeyRound, Lock, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/components/Auth/AuthProvider";
+import { useBackup } from "@/components/Backup";
 import type { ImageRecord } from "@/lib/types";
 import ImageGrid from "./ImageGrid";
 import Lightbox from "./Lightbox";
@@ -19,6 +20,23 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
   const [allImages, setAllImages] = useState<ImageRecord[]>(initialImages);
   const [syncing, setSyncing] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const { subscribeToUploadedImage } = useBackup();
+
+  const handleUploaded = useCallback((newImages: ImageRecord[]) => {
+    setAllImages((previous) => {
+      const byId = new Map(previous.map((image) => [image.id, image]));
+      for (const image of newImages) byId.set(image.id, image);
+      return [...byId.values()];
+    });
+  }, []);
+
+  // Listen for uploads initiated from anywhere (e.g. the Navbar Upload button)
+  useEffect(() => {
+    const unsubscribe = subscribeToUploadedImage((uploadedRecord) => {
+      handleUploaded([uploadedRecord]);
+    });
+    return unsubscribe;
+  }, [subscribeToUploadedImage, handleUploaded]);
 
   // Reload ONLY the signed-in user's photos whenever the account changes.
   // (Logged-out visitors simply see an empty gallery — derived below.)
@@ -66,13 +84,7 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
     }
   }, []);
 
-  const handleUploaded = useCallback((newImages: ImageRecord[]) => {
-    setAllImages((previous) => {
-      const byId = new Map(previous.map((image) => [image.id, image]));
-      for (const image of newImages) byId.set(image.id, image);
-      return [...byId.values()];
-    });
-  }, []);
+
 
   const handleError = useCallback((message: string) => toast.error(message), []);
 
@@ -140,11 +152,14 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
         </button>
       </div>
 
-      <UploadSection
-        onUploaded={handleUploaded}
-        onError={handleError}
-        disabled={authLoading ? true : !user || !hasImgbbKey}
-      />
+      {/* Centered drag-and-drop card ONLY when user has 0 photos in account */}
+      {visibleImages.length === 0 && (
+        <UploadSection
+          onUploaded={handleUploaded}
+          onError={handleError}
+          disabled={authLoading ? true : !user || !hasImgbbKey}
+        />
+      )}
 
       {!authLoading && !user && (
         <div className="vault-card flex flex-wrap items-center gap-3 rounded-2xl p-4 text-sm sm:p-6">

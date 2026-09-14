@@ -1,9 +1,14 @@
-import { Aperture } from "lucide-react";
+"use client";
+
+import { Aperture, UploadCloud } from "lucide-react";
 import Link from "next/link";
 import ThemeToggleButton from "../ThemeToggleButton";
 import UserMenu from "../Auth/UserMenu";
+import { useBackup } from "../Backup";
 
 const Header = () => {
+  const { openUploadPicker, isBackingUp } = useBackup();
+
   return (
     <header
       className="glass-bar fixed top-0 right-0 left-0 z-40 border-x-0 border-t-0"
@@ -35,6 +40,16 @@ const Header = () => {
             className="bg-foreground/[0.04] ring-line-subtle hover:bg-foreground/[0.09] rounded-full px-4 py-1.5 text-sm font-medium ring-1 backdrop-blur transition">
             Home
           </Link>
+
+          <button
+            type="button"
+            onClick={openUploadPicker}
+            disabled={isBackingUp}
+            className="bg-sky hover:bg-sky/90 shadow-sky/20 inline-flex cursor-pointer items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold text-white shadow-sm transition active:scale-95 disabled:pointer-events-none disabled:opacity-60"
+            title="Upload photos">
+            <UploadCloud size={16} aria-hidden />
+            <span>Upload</span>
+          </button>
 
           <ThemeToggleButton />
           <UserMenu />

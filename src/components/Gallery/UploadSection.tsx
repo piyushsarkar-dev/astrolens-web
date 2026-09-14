@@ -3,7 +3,7 @@
 import { ImagePlus, Loader2, UploadCloud } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import type { ChangeEvent, DragEvent } from "react";
-import { ProgressiveImageCard, useBackup } from "@/components/Backup";
+import { useBackup } from "@/components/Backup";
 import { cn } from "@/lib/utils";
 import type { ImageRecord } from "@/lib/types";
 
@@ -22,7 +22,7 @@ const UploadSection = ({
 }: UploadSectionProps) => {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [dragging, setDragging] = useState(false);
-  const { startBackup, isBackingUp, queue, cancelItem, stopBackup } = useBackup();
+  const { startBackup, isBackingUp } = useBackup();
 
   const handleFiles = useCallback(
     (files: File[]) => {
@@ -55,7 +55,7 @@ const UploadSection = ({
   };
 
   return (
-    <section className="space-y-3">
+    <section className="mx-auto w-full max-w-2xl py-4 sm:py-8">
       <div
         role="button"
         tabIndex={0}
@@ -80,8 +80,10 @@ const UploadSection = ({
         }}
         onDrop={handleDrop}
         className={cn(
-          "vault-card flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-dashed px-6 py-10 text-center transition-all sm:py-12",
-          dragging ? "border-sky/60 bg-sky/[0.08]" : "hover:border-sky/40",
+          "vault-card flex cursor-pointer flex-col items-center justify-center gap-4 rounded-3xl border-2 border-dashed px-8 py-12 text-center transition-all duration-300 sm:py-16 shadow-xl",
+          dragging
+            ? "border-sky bg-sky/[0.09] scale-[1.01]"
+            : "border-border/60 hover:border-sky/50 hover:bg-foreground/[0.02]",
           (disabled || isBackingUp) && "pointer-events-none opacity-70",
         )}>
         <input
@@ -94,88 +96,37 @@ const UploadSection = ({
           disabled={disabled || isBackingUp}
         />
 
-        <div className="bg-sky/15 ring-line-subtle grid size-14 place-items-center rounded-full ring-1">
-          {isBackingUp ?
-            <Loader2
-              size={24}
-              className="text-sky animate-spin"
-            />
-          : <UploadCloud
-              size={24}
-              className="text-sky"
-            />
-          }
+        <div className="bg-sky/15 ring-sky/30 shadow-sky/20 grid size-16 place-items-center rounded-2xl ring-1 shadow-lg transition-transform duration-300 group-hover:scale-110">
+          {isBackingUp ? (
+            <Loader2 size={30} className="text-sky animate-spin" />
+          ) : (
+            <UploadCloud size={30} className="text-sky" />
+          )}
         </div>
 
-        <div className="space-y-1">
-          <p className="font-display text-lg font-semibold">
+        <div className="space-y-1.5 max-w-md">
+          <p className="font-display text-xl font-bold tracking-tight text-foreground sm:text-2xl">
             {isBackingUp
               ? "Backing up photos…"
               : "Drag & drop photos here, or click to browse"}
           </p>
-          <p className="text-mist text-sm">
-            Upload up to {MAX_UPLOAD_COUNT} photos at once · images are stored
-            on ImgBB via your API key
+          <p className="text-muted-foreground text-xs leading-relaxed sm:text-sm">
+            Upload up to {MAX_UPLOAD_COUNT} photos at once · images are stored on ImgBB via your API key
           </p>
         </div>
 
         <button
           type="button"
           disabled={disabled || isBackingUp}
-          className="bg-sky hover:bg-sky/90 inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white transition disabled:opacity-50"
+          className="bg-sky hover:bg-sky/90 shadow-sky/25 inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold text-white shadow-md transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
           onClick={(event) => {
             event.stopPropagation();
             inputRef.current?.click();
           }}>
-          <ImagePlus
-            size={16}
-            aria-hidden
-          />
-          {isBackingUp ? "Backing up…" : "Choose images"}
+          <ImagePlus size={18} aria-hidden />
+          <span>{isBackingUp ? "Backing up…" : "Upload files"}</span>
         </button>
       </div>
-
-      {queue.length > 0 && (
-        <div className="vault-card space-y-3 rounded-2xl p-4 sm:p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-display text-sm font-semibold">
-                {isBackingUp ? "Uploading photos…" : "Upload queue"}
-              </p>
-              <p className="text-mist text-xs">
-                Photos clear up progressively as real network upload completes
-              </p>
-            </div>
-            {isBackingUp && (
-              <button
-                type="button"
-                onClick={stopBackup}
-                className="text-xs font-medium text-destructive transition hover:underline">
-                Cancel all
-              </button>
-            )}
-          </div>
-
-          <div className="flex flex-wrap gap-3 pt-1 sm:gap-4">
-            {queue.map((item) => (
-              <div
-                key={item.id}
-                className="flex flex-col items-center gap-1.5">
-                <ProgressiveImageCard
-                  src={item.previewUrl}
-                  progress={item.progress}
-                  status={item.status}
-                  onCancel={() => cancelItem(item.id)}
-                  sizeClassName="size-24 sm:size-28"
-                />
-                <span className="text-mist max-w-24 truncate text-center text-[11px] font-medium">
-                  {item.name}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </section>
   );
 };

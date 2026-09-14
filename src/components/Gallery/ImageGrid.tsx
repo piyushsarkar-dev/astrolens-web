@@ -52,24 +52,7 @@ const ImageGrid = ({ images, onSelectImage }: ImageGridProps) => {
     }
   }, [images]);
   if (images.length === 0) {
-    return (
-      <div className="vault-card grid min-h-72 place-items-center rounded-2xl border-dashed p-10 text-center">
-        <div className="max-w-sm space-y-3">
-          <span className="bg-sky/15 ring-line-subtle mx-auto grid size-16 place-items-center rounded-full ring-1">
-            <Images
-              size={28}
-              className="text-sky"
-              aria-hidden
-            />
-          </span>
-          <p className="font-display text-xl font-semibold">No photos yet</p>
-          <p className="text-mist text-sm">
-            Upload your first photo above, or hit Sync with ImgBB to pull in
-            images that were already uploaded to your ImgBB account.
-          </p>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return (

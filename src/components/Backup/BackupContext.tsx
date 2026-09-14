@@ -56,6 +56,10 @@ type BackupContextType = {
   isSyncingCloud: boolean;
   toggleExpanded: () => void;
   cancelItem: (id: string) => void;
+  openUploadPicker: () => void;
+  subscribeToUploadedImage: (
+    callback: (image: ImageRecord) => void,
+  ) => () => void;
   startBackup: (
     files: (File | Blob)[],
     onImageSuccess?: (image: ImageRecord) => void,
@@ -102,6 +106,28 @@ export const BackupProvider = ({ children }: { children: React.ReactNode }) => {
   const createdUrlsRef = useRef<string[]>([]);
   const queueRef = useRef<BackupItem[]>([]);
   queueRef.current = queue;
+
+  const imageSubscribersRef = useRef<Set<(image: ImageRecord) => void>>(
+    new Set(),
+  );
+  const globalFileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const subscribeToUploadedImage = useCallback(
+    (callback: (image: ImageRecord) => void) => {
+      imageSubscribersRef.current.add(callback);
+      return () => {
+        imageSubscribersRef.current.delete(callback);
+      };
+    },
+    [],
+  );
+
+  const openUploadPicker = useCallback(() => {
+    if (globalFileInputRef.current) {
+      globalFileInputRef.current.value = "";
+      globalFileInputRef.current.click();
+    }
+  }, []);
 
   // Prevent accidental tab close/refresh during active upload
   useEffect(() => {
@@ -396,6 +422,13 @@ export const BackupProvider = ({ children }: { children: React.ReactNode }) => {
           if (onImageSuccess) {
             onImageSuccess(uploadedRecord);
           }
+          for (const callback of imageSubscribersRef.current) {
+            try {
+              callback(uploadedRecord);
+            } catch (subscriberError) {
+              console.error("Subscriber notification error:", subscriberError);
+            }
+          }
         } catch (err) {
           if (tickerInterval) clearInterval(tickerInterval);
           if (stopRequestedRef.current) break;
@@ -600,10 +633,32 @@ export const BackupProvider = ({ children }: { children: React.ReactNode }) => {
         isSyncingCloud,
         toggleExpanded,
         cancelItem,
+        openUploadPicker,
+        subscribeToUploadedImage,
         startBackup,
         stopBackup,
         dismiss,
       }}>
+      <input
+        ref={globalFileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        tabIndex={-1}
+        aria-hidden="true"
+        style={{ display: "none" }}
+        onChange={(event) => {
+          const files = Array.from(event.target.files ?? []);
+          if (files.length === 0) return;
+          const imageFiles = files
+            .filter((file) => file.type.startsWith("image/"))
+            .slice(0, 30);
+          if (imageFiles.length > 0) {
+            startBackup(imageFiles);
+          }
+          event.target.value = "";
+        }}
+      />
       {children}
     </BackupContext.Provider>
   );
