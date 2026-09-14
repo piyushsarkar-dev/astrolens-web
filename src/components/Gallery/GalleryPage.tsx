@@ -1,6 +1,6 @@
 "use client";
 
-import { KeyRound, Lock, RefreshCw } from "lucide-react";
+import { KeyRound, Lock } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/components/Auth/AuthProvider";
@@ -15,10 +15,9 @@ type GalleryPageProps = {
 };
 
 const GalleryPage = ({ initialImages }: GalleryPageProps) => {
-  const { user, profile, loading: authLoading, hasImgbbKey } = useAuth();
+  const { user, loading: authLoading, hasImgbbKey } = useAuth();
   const userId = user?.id ?? null;
   const [allImages, setAllImages] = useState<ImageRecord[]>(initialImages);
-  const [syncing, setSyncing] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const { subscribeToUploadedImage } = useBackup();
 
@@ -62,30 +61,6 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
     [allImages, userId],
   );
 
-  const syncFromImgbb = useCallback(async () => {
-    setSyncing(true);
-    try {
-      const response = await fetch("/api/images/sync", { method: "POST" });
-      const json = (await response.json().catch(() => null)) as {
-        data?: ImageRecord[];
-        error?: string;
-      } | null;
-      if (!response.ok) {
-        throw new Error(json?.error ?? "Could not sync images with ImgBB.");
-      }
-      setAllImages(json?.data ?? []);
-      toast.success("Synced with ImgBB.");
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Could not sync images.",
-      );
-    } finally {
-      setSyncing(false);
-    }
-  }, []);
-
-
-
   const handleError = useCallback((message: string) => toast.error(message), []);
 
   const handleDelete = useCallback(
@@ -117,40 +92,7 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
   );
 
   return (
-    <section className="space-y-6 pt-24 pb-10 sm:pt-28">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="space-y-2">
-          <p className="text-sky text-[11px] font-semibold tracking-[0.18em] uppercase">
-            Lumen Vault
-          </p>
-
-          <h2 className="font-display text-[28px] leading-[36px] font-bold tracking-[-0.02em] lg:text-4xl lg:leading-[44px]">
-            {user
-              ? `${profile?.display_name || user.user_metadata?.display_name || user.email?.split("@")[0] || "Your"}’s Photos`
-              : "Photos"}
-          </h2>
-
-          <p className="text-mist text-sm">
-            {!user
-              ? "Log in to see your private photo vault."
-              : `${visibleImages.length} ${visibleImages.length === 1 ? "photo" : "photos"} · synced with ImgBB`}
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={syncFromImgbb}
-          disabled={syncing || !user || !hasImgbbKey}
-          title={!user ? "Log in first" : !hasImgbbKey ? "Add your ImgBB key in profile first" : "Sync with ImgBB"}
-          className="bg-foreground/[0.04] ring-line-subtle hover:bg-foreground/[0.09] inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium ring-1 backdrop-blur transition disabled:opacity-60">
-          <RefreshCw
-            size={16}
-            className={syncing ? "animate-spin" : ""}
-            aria-hidden
-          />
-          {syncing ? "Syncing…" : "Sync with ImgBB"}
-        </button>
-      </div>
+    <section className="space-y-6 pt-20 pb-10 sm:pt-24">
 
       {/* Centered drag-and-drop card ONLY when user has 0 photos in account */}
       {visibleImages.length === 0 && (
