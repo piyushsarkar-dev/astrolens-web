@@ -8,16 +8,17 @@ type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
-async function requireUserKey(supabase: Awaited<ReturnType<typeof createClient>>) {
+async function requireUser(supabase: Awaited<ReturnType<typeof createClient>>) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Please log in first.", status: 401 as const };
+  // The personal key is only used as a fallback delete attempt; absence of a
+  // key must NOT block deleting an existing photo.
   const { data: profile } = await supabase
     .from("profiles")
     .select("imgbb_api_key")
     .eq("id", user.id)
     .maybeSingle();
-  const key = (profile?.imgbb_api_key as string | null)?.trim() || null;
-  if (!key) return { error: "Add your ImgBB API key in Settings first.", status: 400 as const };
+  const key = (profile?.imgbb_api_key as string | null)?.trim() || undefined;
   return { user, key };
 }
 
@@ -37,13 +38,13 @@ export async function GET(_request: NextRequest, context: RouteContext) {
   return NextResponse.json({ data: image });
 }
 
-// DELETE /api/images/[id] — deletes the photo from ImgBB (using the owner's
-// key, server-side) AND removes it from the local registry. Owner-scoped.
+// DELETE /api/images/[id] — deletes the photo from ImgBB AND removes it from
+// the local registry. Owner-scoped (you can only delete your own photos).
 export async function DELETE(_request: NextRequest, context: RouteContext) {
   try {
     const { id } = await context.params;
     const supabase = await createClient();
-    const auth = await requireUserKey(supabase);
+    const auth = await requireUser(supabase);
     if ("error" in auth) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
@@ -52,19 +53,33 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
     if (!image) {
       return NextResponse.json({ error: "Image not found." }, { status: 404 });
     }
-    if (!image.deleteToken) {
-      return NextResponse.json(
-        { error: "This photo can't be deleted from ImgBB (no delete token). It can only be removed from your gallery view." },
-        { status: 400 },
-      );
+
+    // 1) Delete from ImgBB itself (via its self-authorizing delete_url).
+    let imgbbDeleted = false;
+    let warning: string | undefined;
+    if (image.deleteToken) {
+      try {
+        await deleteImageFromImgbb(image.deleteToken, image.id, auth.key);
+        imgbbDeleted = true;
+      } catch (err) {
+        // Don't leave the photo stuck in the gallery if ImgBB refuses.
+        warning =
+          err instanceof Error
+            ? `Removed from your gallery, but ImgBB said: ${err.message}`
+            : "Removed from your gallery, but ImgBB could not delete it.";
+      }
+    } else {
+      warning =
+        "Removed from your gallery. This old photo has no ImgBB delete link, so it may still exist on ImgBB.";
     }
 
-    // 1) Delete from ImgBB itself using the owner's own key (server-side).
-    await deleteImageFromImgbb(image.deleteToken, auth.key);
-    // 2) Remove the record from the local registry.
+    // 2) Always remove the record from the local registry.
     await removeImage(id, auth.user.id);
 
-    return NextResponse.json({ data: { id: image.id, deleted: true } });
+    return NextResponse.json({
+      data: { id: image.id, deleted: true, imgbbDeleted },
+      warning,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Delete failed.";
     return NextResponse.json({ error: message }, { status: 500 });

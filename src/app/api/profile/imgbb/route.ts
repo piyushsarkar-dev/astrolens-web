@@ -3,8 +3,6 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-type Ctx = { params: Promise<{ action: string[] }> };
-
 function publicStatus(key: string | null | undefined) {
   return {
     configured: Boolean(key?.trim()),
@@ -85,5 +83,3 @@ export async function DELETE() {
     return NextResponse.json({ error: m }, { status: 500 });
   }
 }
-
-export type { Ctx };

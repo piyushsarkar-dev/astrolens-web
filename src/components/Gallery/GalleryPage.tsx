@@ -14,37 +14,34 @@ type GalleryPageProps = {
 
 const GalleryPage = ({ initialImages }: GalleryPageProps) => {
   const { user, profile, loading: authLoading, hasImgbbKey } = useAuth();
-  const [images, setImages] = useState<ImageRecord[]>(initialImages);
+  const userId = user?.id ?? null;
+  const [allImages, setAllImages] = useState<ImageRecord[]>(initialImages);
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
-  // When account changes (login / logout / switch user), reload ONLY that
-  // user's photos from the server. Logged out → clear the grid.
+  // Reload ONLY the signed-in user's photos whenever the account changes.
+  // (Logged-out visitors simply see an empty gallery — derived below.)
   useEffect(() => {
-    if (authLoading) return;
-    if (!user) {
-      setImages([]);
-      setSelectedIndex(null);
-      return;
-    }
+    if (authLoading || !userId) return;
     let cancelled = false;
-    setImages([]);
-    setSelectedIndex(null);
     fetch("/api/images", { cache: "no-store" })
       .then((res) => res.json())
       .then((json: { data?: ImageRecord[] } | null) => {
-        if (!cancelled) setImages(json?.data ?? []);
+        if (!cancelled) setAllImages(json?.data ?? []);
       })
       .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [user?.id, authLoading]);
+  }, [userId, authLoading]);
 
   const visibleImages = useMemo(
-    () => [...images].sort((a, b) => (b.uploadedAt ?? 0) - (a.uploadedAt ?? 0)),
-    [images],
+    () =>
+      userId
+        ? [...allImages].sort((a, b) => (b.uploadedAt ?? 0) - (a.uploadedAt ?? 0))
+        : [],
+    [allImages, userId],
   );
 
   const syncFromImgbb = useCallback(async () => {
@@ -59,7 +56,7 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
       if (!response.ok) {
         throw new Error(json?.error ?? "Could not sync images with ImgBB.");
       }
-      setImages(json?.data ?? []);
+      setAllImages(json?.data ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not sync images.");
     } finally {
@@ -68,7 +65,7 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
   }, []);
 
   const handleUploaded = useCallback((newImages: ImageRecord[]) => {
-    setImages((previous) => {
+    setAllImages((previous) => {
       const byId = new Map(previous.map((image) => [image.id, image]));
       for (const image of newImages) byId.set(image.id, image);
       return [...byId.values()];
@@ -86,13 +83,15 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
         });
         const json = (await response.json().catch(() => null)) as {
           error?: string;
+          warning?: string;
         } | null;
         if (!response.ok) {
           throw new Error(json?.error ?? "Could not delete the photo.");
         }
-        // Remove from the grid and close the viewer if it was open.
-        setImages((previous) => previous.filter((item) => item.id !== image.id));
-        setSelectedIndex((current) => (current === null ? null : null));
+        // Real-time: drop it from the grid immediately and close the viewer.
+        setAllImages((previous) => previous.filter((item) => item.id !== image.id));
+        setSelectedIndex(null);
+        if (json?.warning) setError(json.warning);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Delete failed.");
       }
@@ -201,13 +200,13 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
         onSelectImage={setSelectedIndex}
       />
 
-      {selectedIndex !== null && visibleImages.length > 0 && (
-                        <Lightbox
+      {userId && selectedIndex !== null && visibleImages.length > 0 && (
+        <Lightbox
           images={visibleImages}
           index={selectedIndex}
           onClose={() => setSelectedIndex(null)}
           onNavigate={setSelectedIndex}
-          onDelete={user ? handleDelete : undefined}
+          onDelete={handleDelete}
         />
       )}
     </section>

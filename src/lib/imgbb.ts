@@ -155,36 +155,69 @@ export async function uploadImageToImgbb(
 /**
  * Delete an image from ImgBB.
  *
- * We GET the full `delete_url` ImgBB gave us at upload time. That URL is
- * self-authorizing, so:
+ * ImgBB never documents this. The only thing that works is a plain GET on the
+ * `delete_url` it returns at upload time, e.g.:
+ *   https://ibb.co/c3VRs4x/b3072de2f5287a39f81c7dec3cd8a236
+ * That URL is self-authorizing, so:
  *   - no `key=` query param is needed (passing it yields "Invalid API action"),
- *   - the host must be the `delete_url` (e.g. https://ibb.co/...) rather than
- *     `api.imgbb.com/1/delete/{token}` (which answers "Invalid API v1 key").
+ *   - the host must be `ibb.co/<id>/<deletehash>`, NOT api.imgbb.com (which
+ *     answers "Invalid API v1 key").
+ *
+ * For older registry rows that only stored the bare `deletehash` (no full URL),
+ * we rebuild the delete URL as `https://ibb.co/{imageId}/{deletehash}`.
  */
 export async function deleteImageFromImgbb(
-  deleteUrl: string,
-  _apiKey?: string,
+  deleteUrl: string | null | undefined,
+  imageId: string,
+  apiKey?: string,
 ): Promise<void> {
-  if (!/^https?:\/\//i.test(deleteUrl)) {
-    throw new Error("No valid ImgBB delete URL is available for this photo.");
+  const stored = deleteUrl?.trim() || null;
+  if (!stored) {
+    throw new Error(
+      "This photo has no ImgBB delete link — it can only be removed from your gallery view.",
+    );
   }
-  const response = await fetch(deleteUrl, {
-    method: "GET",
-    cache: "no-store",
-    redirect: "manual",
-  });
 
-  // ibb.co delete responds 200 + HTML on success, or 4xx on failure.
-  if (!response.ok) {
-    let detail = "";
-    try {
-      const json = (await response.json()) as { error?: { message?: string } | string } | null;
-      detail = typeof json?.error === "string" ? json.error : json?.error?.message ?? "";
-    } catch {
-      detail = await response.text().catch(() => "");
-    }
-    throw new Error(detail || `ImgBB delete failed (HTTP ${response.status}).`);
+  // Full self-authorizing URL (https://ibb.co/<id>/<deletehash>) — or just the
+  // bare deletehash for registry rows written by older versions of the app.
+  const isFullUrl = /^https?:\/\//i.test(stored);
+  const hash = isFullUrl ? stored.split("/").filter(Boolean).at(-1) ?? "" : stored;
+  const fullUrl = isFullUrl
+    ? stored
+    : `https://ibb.co/${encodeURIComponent(imageId)}/${encodeURIComponent(stored)}`;
+
+  const attempts: string[] = [fullUrl];
+  if (apiKey) {
+    // Fallback endpoint used by several ImgBB integrations.
+    attempts.push(
+      `${IMGBB_API_BASE}/delete/${encodeURIComponent(hash)}?key=${encodeURIComponent(apiKey)}`,
+    );
   }
+
+  let lastError = "";
+  for (const url of attempts) {
+    try {
+      const response = await fetch(url, { method: "GET", cache: "no-store" });
+      if (response.ok) return; // 302 → 200 success page / 200 JSON
+      let detail = "";
+      try {
+        const json = (await response.json()) as
+          | { error?: { message?: string } | string }
+          | null;
+        detail =
+          typeof json?.error === "string" ? json.error : json?.error?.message ?? "";
+      } catch {
+        detail = (await response.text().catch(() => "")).slice(0, 160);
+      }
+      lastError = detail || `HTTP ${response.status}`;
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : "network error";
+    }
+  }
+
+  throw new Error(
+    lastError || "ImgBB refused to delete this photo. Please try again.",
+  );
 }
 
 // ---------------------------------------------------------------------------
