@@ -1,6 +1,7 @@
 import { Aperture } from "lucide-react";
 import Link from "next/link";
 import ThemeToggleButton from "../ThemeToggleButton";
+import UserMenu from "../Auth/UserMenu";
 
 const Header = () => {
   return (
@@ -36,6 +37,7 @@ const Header = () => {
           </Link>
 
           <ThemeToggleButton />
+          <UserMenu />
         </nav>
       </div>
     </header>

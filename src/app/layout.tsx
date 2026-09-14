@@ -1,8 +1,10 @@
 import Header from "@/components/Header/Header";
 import ThemeProvider from "@/components/Providers/ThemeProvider";
+import { AuthProvider } from "@/components/Auth/AuthProvider";
 import { geistMono, inter, jakarta } from "@/lib/fonts";
 import { ReactNode } from "react";
 import "./globals.css";
+
 
 type RootLayoutProps = {
   children: ReactNode;
@@ -19,11 +21,13 @@ const RootLayout = ({ children }: Readonly<RootLayoutProps>) => {
           attribute={"class"}
           defaultTheme="dark"
           enableSystem={false}>
-          <Header />
+          <AuthProvider>
+            <Header />
 
-          <main className="mx-auto w-full max-w-[1440px] px-4 py-3 sm:px-6 lg:px-8">
-            {children}
-          </main>
+            <main className="mx-auto w-full max-w-[1440px] px-4 py-3 sm:px-6 lg:px-8">
+              {children}
+            </main>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
