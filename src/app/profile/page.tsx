@@ -3,8 +3,9 @@ import { Eye, EyeOff, KeyRound, Loader2, Save } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/Auth/AuthProvider";
+import UserAvatar from "@/components/Auth/UserAvatar";
 const ProfilePage = () => {
-  const { user, profile, loading, profileLoading, refreshProfile } = useAuth();
+  const { user, profile, avatarUrl, loading, profileLoading, refreshProfile } = useAuth();
   const [name, setName] = useState("");
   const [imgbbKey, setImgbbKey] = useState("");
   const [showKey, setShowKey] = useState(false);
@@ -58,8 +59,18 @@ const ProfilePage = () => {
   return (
     <section className="mx-auto w-full max-w-md pt-28 pb-16 sm:pt-32">
       <div className="vault-card rounded-3xl p-6 sm:p-8">
-        <h2 className="font-display text-2xl font-bold">Your profile</h2>
-        <p className="text-mist mt-1 text-sm">{user.email}</p>
+        <div className="flex items-center gap-4">
+          <UserAvatar seed={user.id} avatarUrl={avatarUrl} size={64} />
+          <div className="min-w-0">
+            <h2 className="font-display text-2xl font-bold">Your profile</h2>
+            <p className="text-mist mt-1 truncate text-sm">{user.email}</p>
+            {avatarUrl ? (
+              <p className="text-mist mt-0.5 text-xs">Avatar: Google profile photo</p>
+            ) : (
+              <p className="text-mist mt-0.5 text-xs">Avatar: auto-generated (surprise me!) — stable per account</p>
+            )}
+          </div>
+        </div>
         <form onSubmit={save} className="mt-6 space-y-4">
           <label className="block">
             <span className="mb-1.5 block text-sm font-medium">Display name</span>

@@ -6,6 +6,7 @@ import type { Profile } from "@/lib/types";
 type AuthContextValue = {
   user: User | null;
   profile: Profile | null;
+  avatarUrl: string | null;
   loading: boolean;
   profileLoading: boolean;
   hasImgbbKey: boolean;
@@ -15,6 +16,7 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue>({
   user: null,
   profile: null,
+  avatarUrl: null,
   loading: true,
   profileLoading: false,
   hasImgbbKey: false,
@@ -84,6 +86,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       value={{
         user,
         profile,
+        avatarUrl:
+          profile?.avatar_url ??
+          (user?.user_metadata?.avatar_url as string | undefined) ??
+          (user?.user_metadata?.picture as string | undefined) ??
+          null,
         loading,
         profileLoading,
         hasImgbbKey: Boolean(profile?.imgbb_api_key?.trim()),
