@@ -68,10 +68,11 @@ type ImgbbUploadResponse = {
 export function extractDeleteToken(
   deleteUrl: string | null | undefined,
 ): string | null {
+  // ImgBB returns a self-contained `delete_url` like
+  //   https://ibb.co/c3VRs4x/b3072de2f5287a39f81c7dec3cd8a236
+  // A plain GET on that exact URL deletes the image (no API key needed).
   if (!deleteUrl || deleteUrl === "undefined") return null;
-  const segments = deleteUrl.split("/").filter(Boolean);
-  const token = segments.at(-1);
-  return token && token.length > 6 ? token : null;
+  return deleteUrl;
 }
 
 export function normalizeImgbbImage(data: ImgbbImageData): ImageRecord {
@@ -154,29 +155,35 @@ export async function uploadImageToImgbb(
 /**
  * Delete an image from ImgBB.
  *
- * ImgBB's `delete_url` (e.g. https://api.imgbb.com/1/delete/abc123) is
- * self-contained: a plain GET deletes the image using the token embedded in
- * the URL. The API `key` parameter is NOT required on this endpoint — and
- * passing it makes ImgBB answer "Invalid API action". We reconstruct the
- * endpoint from the stored delete token and GET it.
+ * We GET the full `delete_url` ImgBB gave us at upload time. That URL is
+ * self-authorizing, so:
+ *   - no `key=` query param is needed (passing it yields "Invalid API action"),
+ *   - the host must be the `delete_url` (e.g. https://ibb.co/...) rather than
+ *     `api.imgbb.com/1/delete/{token}` (which answers "Invalid API v1 key").
  */
 export async function deleteImageFromImgbb(
-  deleteToken: string,
+  deleteUrl: string,
   _apiKey?: string,
 ): Promise<void> {
-  const response = await fetch(
-    `${IMGBB_API_BASE}/delete/${encodeURIComponent(deleteToken)}`,
-    { method: "GET", cache: "no-store" },
-  );
+  if (!/^https?:\/\//i.test(deleteUrl)) {
+    throw new Error("No valid ImgBB delete URL is available for this photo.");
+  }
+  const response = await fetch(deleteUrl, {
+    method: "GET",
+    cache: "no-store",
+    redirect: "manual",
+  });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const json: any = await response.json().catch(() => null);
-
-  const ok = response.ok && json?.success === true;
-  if (!ok) {
-    const message =
-      typeof json?.error === "string" ? json.error : json?.error?.message;
-    throw new Error(message || `ImgBB delete failed (HTTP ${response.status}).`);
+  // ibb.co delete responds 200 + HTML on success, or 4xx on failure.
+  if (!response.ok) {
+    let detail = "";
+    try {
+      const json = (await response.json()) as { error?: { message?: string } | string } | null;
+      detail = typeof json?.error === "string" ? json.error : json?.error?.message ?? "";
+    } catch {
+      detail = await response.text().catch(() => "");
+    }
+    throw new Error(detail || `ImgBB delete failed (HTTP ${response.status}).`);
   }
 }
 
