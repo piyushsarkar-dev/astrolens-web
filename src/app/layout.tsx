@@ -1,6 +1,8 @@
 import Header from "@/components/Header/Header";
 import ThemeProvider from "@/components/Providers/ThemeProvider";
 import { AuthProvider } from "@/components/Auth/AuthProvider";
+import { BackupProvider, BackupToaster } from "@/components/Backup";
+import { Toaster } from "@/components/shadcnui/sonner";
 import { geistMono, inter, jakarta } from "@/lib/fonts";
 import { ReactNode } from "react";
 import "./globals.css";
@@ -22,11 +24,16 @@ const RootLayout = ({ children }: Readonly<RootLayoutProps>) => {
           defaultTheme="dark"
           enableSystem={false}>
           <AuthProvider>
-            <Header />
+            <BackupProvider>
+              <Header />
 
-            <main className="mx-auto w-full max-w-[1440px] px-4 py-3 sm:px-6 lg:px-8">
-              {children}
-            </main>
+              <main className="mx-auto w-full max-w-[1440px] px-4 py-3 sm:px-6 lg:px-8">
+                {children}
+              </main>
+
+              <Toaster />
+              <BackupToaster />
+            </BackupProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

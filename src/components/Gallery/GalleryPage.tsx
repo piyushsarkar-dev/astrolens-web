@@ -1,7 +1,8 @@
 "use client";
 
-import { AlertCircle, KeyRound, Lock, RefreshCw, X } from "lucide-react";
+import { KeyRound, Lock, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { useAuth } from "@/components/Auth/AuthProvider";
 import type { ImageRecord } from "@/lib/types";
 import ImageGrid from "./ImageGrid";
@@ -17,7 +18,6 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
   const userId = user?.id ?? null;
   const [allImages, setAllImages] = useState<ImageRecord[]>(initialImages);
   const [syncing, setSyncing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
   // Reload ONLY the signed-in user's photos whenever the account changes.
@@ -46,7 +46,6 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
 
   const syncFromImgbb = useCallback(async () => {
     setSyncing(true);
-    setError(null);
     try {
       const response = await fetch("/api/images/sync", { method: "POST" });
       const json = (await response.json().catch(() => null)) as {
@@ -57,8 +56,11 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
         throw new Error(json?.error ?? "Could not sync images with ImgBB.");
       }
       setAllImages(json?.data ?? []);
+      toast.success("Synced with ImgBB.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not sync images.");
+      toast.error(
+        err instanceof Error ? err.message : "Could not sync images.",
+      );
     } finally {
       setSyncing(false);
     }
@@ -72,11 +74,10 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
     });
   }, []);
 
-  const handleError = useCallback((message: string) => setError(message), []);
+  const handleError = useCallback((message: string) => toast.error(message), []);
 
   const handleDelete = useCallback(
     async (image: ImageRecord) => {
-      setError(null);
       try {
         const response = await fetch(`/api/images/${encodeURIComponent(image.id)}`, {
           method: "DELETE",
@@ -91,9 +92,13 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
         // Real-time: drop it from the grid immediately and close the viewer.
         setAllImages((previous) => previous.filter((item) => item.id !== image.id));
         setSelectedIndex(null);
-        if (json?.warning) setError(json.warning);
+        if (json?.warning) {
+          toast.warning("Deleted from your gallery", { description: json.warning });
+        } else {
+          toast.success("Photo deleted from ImgBB and your gallery.");
+        }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Delete failed.");
+        toast.error(err instanceof Error ? err.message : "Delete failed.");
       }
     },
     [],
@@ -167,31 +172,6 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
             <p className="text-mist mt-0.5 text-sm">Save your personal key — open Settings from your account menu. It is free at api.imgbb.com.</p>
           </div>
           <a href="/settings" className="bg-sky rounded-full px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-sky/90">Open Settings</a>
-        </div>
-      )}
-
-      {error && (
-        <div
-          role="alert"
-          className="vault-card text-gold flex items-start gap-3 rounded-2xl p-4 text-sm sm:p-6">
-          <AlertCircle
-            size={18}
-            className="mt-0.5 shrink-0"
-            aria-hidden
-          />
-          <div className="flex-1">
-            <p className="font-display text-base font-semibold">
-              Something went wrong
-            </p>
-            <p className="text-mist mt-1 text-sm">{error}</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setError(null)}
-            aria-label="Dismiss error"
-            className="bg-foreground/[0.04] hover:bg-foreground/[0.09] ring-line-subtle shrink-0 rounded-full p-1.5 ring-1 transition">
-            <X size={16} />
-          </button>
         </div>
       )}
 
