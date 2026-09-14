@@ -22,7 +22,7 @@ const Lightbox = ({
 }: LightboxProps) => {
   const image = images[index];
   const [deleting, setDeleting] = useState(false);
-  const [fullLoaded, setFullLoaded] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const go = useCallback(
     (delta: number) => {
@@ -32,12 +32,12 @@ const Lightbox = ({
     [images.length, index, onNavigate],
   );
 
-  // Reset loaded state whenever image changes
+  // Reset loading state whenever image changes
   useEffect(() => {
-    setFullLoaded(false);
+    setLoading(true);
   }, [image?.id]);
 
-  // Preload adjacent (next & previous) images for zero-latency arrow navigation
+  // Preload adjacent (next & previous) images for instantaneous arrow navigation
   useEffect(() => {
     if (images.length === 0) return;
     const nextImg = images[(index + 1) % images.length];
@@ -62,9 +62,7 @@ const Lightbox = ({
 
   if (!image) return null;
 
-  // Use web-optimized displayUrl first for speed, fallback to raw url
-  const fullSrc = image.displayUrl || image.url;
-  const thumbSrc = image.thumbUrl || image.displayUrl || image.url;
+  const src = image.displayUrl || image.url;
 
   const handleDelete = async () => {
     if (!onDelete || deleting) return;
@@ -85,13 +83,13 @@ const Lightbox = ({
       role="dialog"
       aria-modal="true"
       aria-label={image.title || "Photo viewer"}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-[20px]"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-xl animate-in fade-in duration-150"
       onClick={onClose}>
       <button
         type="button"
         onClick={onClose}
         aria-label="Close viewer"
-        className="bg-foreground/[0.08] ring-line-strong hover:bg-foreground/[0.16] absolute top-4 right-4 z-10 grid size-10 place-items-center rounded-full text-white ring-1 transition">
+        className="bg-foreground/[0.08] ring-line-strong hover:bg-foreground/[0.16] absolute top-4 right-4 z-10 grid size-10 place-items-center rounded-full text-white ring-1 transition cursor-pointer">
         <X size={22} />
       </button>
 
@@ -105,13 +103,12 @@ const Lightbox = ({
           disabled={deleting}
           aria-label="Delete photo"
           title="Delete from ImgBB and your gallery"
-          className="ring-destructive/50 hover:bg-destructive absolute top-4 right-16 z-10 grid size-10 place-items-center rounded-full bg-red-500/20 text-white ring-1 transition disabled:opacity-60">
-          {deleting ?
-            <Loader2
-              size={18}
-              className="animate-spin"
-            />
-          : <Trash2 size={18} />}
+          className="ring-destructive/50 hover:bg-destructive absolute top-4 right-16 z-10 grid size-10 place-items-center rounded-full bg-red-500/20 text-white ring-1 transition disabled:opacity-60 cursor-pointer">
+          {deleting ? (
+            <Loader2 size={18} className="animate-spin" />
+          ) : (
+            <Trash2 size={18} />
+          )}
         </button>
       )}
 
@@ -122,39 +119,34 @@ const Lightbox = ({
           go(-1);
         }}
         aria-label="Previous photo"
-        className="bg-foreground/[0.08] ring-line-strong hover:bg-foreground/[0.16] absolute left-3 grid size-11 place-items-center rounded-full text-white ring-1 transition sm:left-6">
+        className="bg-foreground/[0.08] ring-line-strong hover:bg-foreground/[0.16] absolute left-3 grid size-11 place-items-center rounded-full text-white ring-1 transition sm:left-6 cursor-pointer">
         <ChevronLeft size={26} />
       </button>
 
       <figure
-        className="vault-modal w-[92vw] max-w-3xl space-y-0 overflow-hidden rounded-3xl"
+        className="vault-modal w-[92vw] max-w-4xl space-y-0 overflow-hidden rounded-3xl shadow-2xl border border-white/10 animate-in zoom-in-95 fade-in duration-150"
         onClick={(event) => event.stopPropagation()}>
-        <div className="relative mx-auto flex max-h-[72vh] min-h-60 w-full items-center justify-center overflow-hidden bg-black">
-          {/* Layer 1: Instant thumbnail (0ms latency, already in browser cache from grid) */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={thumbSrc}
-            alt=""
-            aria-hidden="true"
-            className={`max-h-[72vh] w-full object-contain transition-opacity duration-300 ${
-              fullLoaded ? "opacity-0" : "opacity-100 blur-[0.5px]"
-            }`}
-          />
+        <div className="relative mx-auto flex max-h-[75vh] min-h-64 w-full items-center justify-center overflow-hidden bg-black/70">
+          {loading && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Loader2 size={32} className="text-sky animate-spin opacity-80" />
+            </div>
+          )}
 
-          {/* Layer 2: High-resolution full image (seamlessly fades in on load) */}
+          {/* Single clean image layer - no ghosting, no double images */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             key={image.id}
-            src={fullSrc}
+            src={src}
             alt={image.title || "Photo"}
-            onLoad={() => setFullLoaded(true)}
-            className={`absolute inset-0 mx-auto max-h-[72vh] w-full object-contain transition-opacity duration-300 ${
-              fullLoaded ? "opacity-100" : "opacity-0"
+            onLoad={() => setLoading(false)}
+            className={`max-h-[75vh] w-auto max-w-full object-contain transition-opacity duration-150 ${
+              loading ? "opacity-0" : "opacity-100"
             }`}
           />
         </div>
 
-        <figcaption className="flex items-center justify-between gap-4 px-4 py-3 text-sm sm:px-6">
+        <figcaption className="flex items-center justify-between gap-4 px-4 py-3 text-sm sm:px-6 bg-vault-lowest/95 backdrop-blur border-t border-white/5">
           <p className="font-display truncate text-base font-semibold">
             {image.title || "Untitled"}
           </p>
@@ -171,7 +163,7 @@ const Lightbox = ({
           go(1);
         }}
         aria-label="Next photo"
-        className="bg-foreground/[0.08] ring-line-strong hover:bg-foreground/[0.16] absolute right-3 grid size-11 place-items-center rounded-full text-white ring-1 transition sm:right-6">
+        className="bg-foreground/[0.08] ring-line-strong hover:bg-foreground/[0.16] absolute right-3 grid size-11 place-items-center rounded-full text-white ring-1 transition sm:right-6 cursor-pointer">
         <ChevronRight size={26} />
       </button>
     </div>

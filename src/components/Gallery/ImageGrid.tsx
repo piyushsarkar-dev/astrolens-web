@@ -1,6 +1,5 @@
 "use client";
 
-import { Check, Images } from "lucide-react";
 import { useEffect } from "react";
 import { preloadImage } from "@/lib/preloadImage";
 import type { ImageRecord } from "@/lib/types";
@@ -51,6 +50,7 @@ const ImageGrid = ({ images, onSelectImage }: ImageGridProps) => {
       return () => clearTimeout(timer);
     }
   }, [images]);
+
   if (images.length === 0) {
     return null;
   }
@@ -65,7 +65,7 @@ const ImageGrid = ({ images, onSelectImage }: ImageGridProps) => {
           onMouseEnter={() => void preloadImage(image.displayUrl || image.url)}
           onFocus={() => void preloadImage(image.displayUrl || image.url)}
           onTouchStart={() => void preloadImage(image.displayUrl || image.url)}
-          className="group bg-vault-lowest ring-line-subtle focus-visible:ring-sky relative block w-full break-inside-avoid overflow-hidden rounded-xl text-left ring-1 transition-shadow duration-200 hover:shadow-[0_8px_32px_rgba(0,0,0,0.56)] focus-visible:ring-2 focus-visible:outline-none">
+          className="group bg-vault-lowest ring-line-subtle focus-visible:ring-sky relative block w-full break-inside-avoid overflow-hidden rounded-xl text-left ring-1 transition-all duration-200 hover:shadow-[0_8px_32px_rgba(0,0,0,0.56)] focus-visible:ring-2 focus-visible:outline-none cursor-pointer">
           {/* eslint-disable-next-line @next/next/no-img-element -- masonry grid needs natural aspect ratio from remote images */}
           <img
             src={image.thumbUrl || image.url}
@@ -75,10 +75,10 @@ const ImageGrid = ({ images, onSelectImage }: ImageGridProps) => {
             height={image.height > 0 ? image.height : undefined}
             loading="lazy"
             decoding="async"
-            className="w-full transition-transform duration-300 will-change-transform group-hover:scale-[1.04]"
+            className="w-full transition-transform duration-200 will-change-transform group-hover:scale-[1.02]"
           />
 
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent p-3 pt-10 opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-visible:opacity-100">
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent p-3 pt-10 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
             <p className="truncate text-sm font-semibold text-white drop-shadow">
               {image.title || "Untitled"}
             </p>
@@ -86,15 +86,6 @@ const ImageGrid = ({ images, onSelectImage }: ImageGridProps) => {
               {formatDate(image.uploadedAt)}
             </p>
           </div>
-
-          <span className="bg-sky ring-line-strong absolute top-2.5 right-2.5 grid size-6 place-items-center rounded-full opacity-0 ring-1 transition-opacity duration-200 group-hover:opacity-100">
-            <Check
-              size={13}
-              strokeWidth={3}
-              className="text-white"
-              aria-hidden
-            />
-          </span>
         </button>
       ))}
     </div>
