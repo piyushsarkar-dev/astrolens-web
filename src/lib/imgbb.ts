@@ -151,16 +151,25 @@ export async function uploadImageToImgbb(
   return image;
 }
 
+/**
+ * Delete an image from ImgBB.
+ *
+ * ImgBB's `delete_url` (e.g. https://api.imgbb.com/1/delete/abc123) is
+ * self-contained: a plain GET deletes the image using the token embedded in
+ * the URL. The API `key` parameter is NOT required on this endpoint — and
+ * passing it makes ImgBB answer "Invalid API action". We reconstruct the
+ * endpoint from the stored delete token and GET it.
+ */
 export async function deleteImageFromImgbb(
   deleteToken: string,
-  apiKey: string,
+  _apiKey?: string,
 ): Promise<void> {
   const response = await fetch(
-    `${IMGBB_API_BASE}/delete/${encodeURIComponent(deleteToken)}?key=${encodeURIComponent(apiKey)}`,
+    `${IMGBB_API_BASE}/delete/${encodeURIComponent(deleteToken)}`,
     { method: "GET", cache: "no-store" },
   );
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const json: any = await response.json().catch(() => null);
 
   const ok = response.ok && json?.success === true;
