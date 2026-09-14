@@ -1,5 +1,5 @@
 {
-  "name": "nextjs-starter-frontend",
+  "name": "Astro-Lens",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -46,7 +46,7 @@
     "node": ">=24.x.x",
     "npm": ">=11.x.x"
   },
-  "author": "Saikat Sardar",
+  "author": "Piyush Sarkar",
   "license": "MIT",
-  "homepage": "https://github.com/MrSaikatS/nextjs-starter-frontend#readme"
+  "homepage": "https://github.com/piyushsarkar-dev/astrolens-web"
 }
