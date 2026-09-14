@@ -155,21 +155,19 @@ export async function uploadImageToImgbb(
 /**
  * Delete an image from ImgBB.
  *
- * ImgBB never documents this. The only thing that works is a plain GET on the
- * `delete_url` it returns at upload time, e.g.:
- *   https://ibb.co/c3VRs4x/b3072de2f5287a39f81c7dec3cd8a236
- * That URL is self-authorizing, so:
- *   - no `key=` query param is needed (passing it yields "Invalid API action"),
- *   - the host must be `ibb.co/<id>/<deletehash>`, NOT api.imgbb.com (which
- *     answers "Invalid API v1 key").
+ * ImgBB provides a self-contained `delete_url` returned at upload time, e.g.:
+ *   https://ibb.co/27PLGGYf/e66eda992bf77d30c2d01bdca107cfd6
  *
- * For older registry rows that only stored the bare `deletehash` (no full URL),
- * we rebuild the delete URL as `https://ibb.co/{imageId}/{deletehash}`.
+ * To properly delete from ImgBB (powered by Chevereto), we:
+ *   1. GET the delete URL with browser headers to obtain the dynamic `auth_token`
+ *      and the `CHV.obj.resource` metadata.
+ *   2. POST to `https://ibb.co/json` with action="delete", auth_token, and resource
+ *      data. ImgBB then responds with HTTP 200 `{ success: { message: "Image deleted" } }`.
  */
 export async function deleteImageFromImgbb(
   deleteUrl: string | null | undefined,
   imageId: string,
-  apiKey?: string,
+  _apiKey?: string,
 ): Promise<void> {
   const stored = deleteUrl?.trim() || null;
   if (!stored) {
@@ -178,46 +176,139 @@ export async function deleteImageFromImgbb(
     );
   }
 
-  // Full self-authorizing URL (https://ibb.co/<id>/<deletehash>) — or just the
-  // bare deletehash for registry rows written by older versions of the app.
+  // Full self-authorizing URL (https://ibb.co/<id>/<deletehash>) or bare deletehash
   const isFullUrl = /^https?:\/\//i.test(stored);
-  const hash = isFullUrl ? stored.split("/").filter(Boolean).at(-1) ?? "" : stored;
   const fullUrl = isFullUrl
     ? stored
     : `https://ibb.co/${encodeURIComponent(imageId)}/${encodeURIComponent(stored)}`;
 
-  const attempts: string[] = [fullUrl];
-  if (apiKey) {
-    // Fallback endpoint used by several ImgBB integrations.
-    attempts.push(
-      `${IMGBB_API_BASE}/delete/${encodeURIComponent(hash)}?key=${encodeURIComponent(apiKey)}`,
+  const userAgent =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+
+  // Step 1: Fetch the delete page to obtain the auth_token and resource metadata
+  let pageRes: Response;
+  try {
+    pageRes = await fetch(fullUrl, {
+      method: "GET",
+      cache: "no-store",
+      headers: {
+        "User-Agent": userAgent,
+        Accept:
+          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+      },
+    });
+  } catch (err) {
+    throw new Error(
+      `Could not reach ImgBB: ${err instanceof Error ? err.message : "network error"}`,
     );
   }
 
-  let lastError = "";
-  for (const url of attempts) {
+  // If already 404, it was already deleted on ImgBB
+  if (pageRes.status === 404) {
+    return;
+  }
+
+  const cookies = pageRes.headers.get("set-cookie") || "";
+  const html = await pageRes.text();
+
+  if (
+    html.includes("Page not found") ||
+    html.includes("That page doesn't exist") ||
+    html.includes("The requested page cannot be found")
+  ) {
+    return;
+  }
+
+  // Step 2: Parse PF.obj.config.auth_token and CHV.obj.resource
+  const authTokenMatch = html.match(/PF\.obj\.config\.auth_token="([^"]+)"/);
+  const authToken = authTokenMatch ? authTokenMatch[1] : null;
+
+  const resourceMatch = html.match(/CHV\.obj\.resource=({[^;]+});/);
+  let resource: {
+    id?: string;
+    type?: string;
+    url?: string;
+    privacy?: string;
+    parent_url?: string;
+    hash?: string;
+    user?: {
+      name?: string;
+      username?: string;
+      id?: string;
+      url?: string;
+    };
+  } | null = null;
+
+  if (resourceMatch) {
     try {
-      const response = await fetch(url, { method: "GET", cache: "no-store" });
-      if (response.ok) return; // 302 → 200 success page / 200 JSON
-      let detail = "";
-      try {
-        const json = (await response.json()) as
-          | { error?: { message?: string } | string }
-          | null;
-        detail =
-          typeof json?.error === "string" ? json.error : json?.error?.message ?? "";
-      } catch {
-        detail = (await response.text().catch(() => "")).slice(0, 160);
-      }
-      lastError = detail || `HTTP ${response.status}`;
-    } catch (err) {
-      lastError = err instanceof Error ? err.message : "network error";
+      resource = JSON.parse(resourceMatch[1]);
+    } catch {
+      resource = null;
     }
   }
 
-  throw new Error(
-    lastError || "ImgBB refused to delete this photo. Please try again.",
-  );
+  if (!authToken) {
+    throw new Error(
+      "Could not obtain ImgBB authorization token from delete page.",
+    );
+  }
+
+  // Step 3: Send POST to https://ibb.co/json to perform real deletion
+  const params = new URLSearchParams();
+  params.append("auth_token", authToken);
+  params.append("action", "delete");
+  params.append("delete", resource?.type || "image");
+  params.append("from", "resource");
+  if (resource?.user?.id) {
+    params.append("owner", resource.user.id);
+  }
+  params.append("deleting[id]", resource?.id || imageId);
+  params.append("deleting[type]", resource?.type || "image");
+  if (resource?.url) params.append("deleting[url]", resource.url);
+  if (resource?.privacy) params.append("deleting[privacy]", resource.privacy);
+  if (resource?.parent_url)
+    params.append("deleting[parent_url]", resource.parent_url);
+  if (resource?.hash) params.append("deleting[hash]", resource.hash);
+  if (resource?.user) {
+    if (resource.user.name)
+      params.append("deleting[user][name]", resource.user.name);
+    if (resource.user.username)
+      params.append("deleting[user][username]", resource.user.username);
+    if (resource.user.id)
+      params.append("deleting[user][id]", resource.user.id);
+    if (resource.user.url)
+      params.append("deleting[user][url]", resource.user.url);
+  }
+
+  const deleteRes = await fetch("https://ibb.co/json", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+      "User-Agent": userAgent,
+      Referer: fullUrl,
+      Origin: "https://ibb.co",
+      ...(cookies ? { Cookie: cookies } : {}),
+    },
+    body: params.toString(),
+  });
+
+  const deleteJson = (await deleteRes.json().catch(() => null)) as {
+    status_code?: number;
+    success?: { message?: string; code?: number };
+    error?: { message?: string; code?: number } | string;
+  } | null;
+
+  if (deleteRes.ok && (deleteJson?.status_code === 200 || deleteJson?.success)) {
+    return; // Successfully deleted from ImgBB!
+  }
+
+  const errMsg =
+    typeof deleteJson?.error === "string"
+      ? deleteJson.error
+      : deleteJson?.error?.message ||
+        `ImgBB returned HTTP ${deleteRes.status} when deleting image.`;
+
+  throw new Error(errMsg);
 }
 
 // ---------------------------------------------------------------------------
