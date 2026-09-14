@@ -1,6 +1,8 @@
 "use client";
 
 import { Check, Images } from "lucide-react";
+import { useEffect } from "react";
+import { preloadImage } from "@/lib/preloadImage";
 import type { ImageRecord } from "@/lib/types";
 
 type ImageGridProps = {
@@ -18,6 +20,37 @@ const formatDate = (timestamp: number) => {
 };
 
 const ImageGrid = ({ images, onSelectImage }: ImageGridProps) => {
+  // Warm up the first 8 photos during browser idle time so initial clicks are instant
+  useEffect(() => {
+    if (typeof window === "undefined" || images.length === 0) return;
+
+    const warmInitialImages = () => {
+      const initialBatch = images.slice(0, 8);
+      for (const img of initialBatch) {
+        void preloadImage(img.displayUrl || img.url);
+      }
+    };
+
+    if ("requestIdleCallback" in window) {
+      const handle = (
+        window as unknown as {
+          requestIdleCallback: (
+            cb: () => void,
+            opts?: { timeout: number },
+          ) => number;
+        }
+      ).requestIdleCallback(warmInitialImages, { timeout: 2000 });
+      return () =>
+        (
+          window as unknown as {
+            cancelIdleCallback: (id: number) => void;
+          }
+        ).cancelIdleCallback(handle);
+    } else {
+      const timer = setTimeout(warmInitialImages, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [images]);
   if (images.length === 0) {
     return (
       <div className="vault-card grid min-h-72 place-items-center rounded-2xl border-dashed p-10 text-center">
@@ -46,6 +79,9 @@ const ImageGrid = ({ images, onSelectImage }: ImageGridProps) => {
           key={image.id}
           type="button"
           onClick={() => onSelectImage(index)}
+          onMouseEnter={() => void preloadImage(image.displayUrl || image.url)}
+          onFocus={() => void preloadImage(image.displayUrl || image.url)}
+          onTouchStart={() => void preloadImage(image.displayUrl || image.url)}
           className="group bg-vault-lowest ring-line-subtle focus-visible:ring-sky relative block w-full break-inside-avoid overflow-hidden rounded-xl text-left ring-1 transition-shadow duration-200 hover:shadow-[0_8px_32px_rgba(0,0,0,0.56)] focus-visible:ring-2 focus-visible:outline-none">
           {/* eslint-disable-next-line @next/next/no-img-element -- masonry grid needs natural aspect ratio from remote images */}
           <img
