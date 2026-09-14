@@ -6,14 +6,17 @@ import {
   ChevronDown,
   ChevronUp,
   Clock,
+  CloudUpload,
   Loader2,
   X,
 } from "lucide-react";
-import { useBackup } from "./BackupContext";
+import { formatBytes, useBackup } from "./BackupContext";
+import { ProgressiveImageCard } from "./ProgressiveImageCard";
 
 export const BackupToaster = () => {
   const {
     queue,
+    currentIndex,
     visible,
     currentPreviewUrl,
     overallProgress,
@@ -23,7 +26,11 @@ export const BackupToaster = () => {
     isExpanded,
     statusHeadline,
     counterText,
+    speedText,
+    dataTransferText,
+    isSyncingCloud,
     toggleExpanded,
+    cancelItem,
     stopBackup,
     dismiss,
   } = useBackup();
@@ -35,7 +42,7 @@ export const BackupToaster = () => {
       role="status"
       aria-live="polite"
       aria-label="Backup progress"
-      className="fixed right-4 bottom-4 z-50 w-[calc(100vw-2rem)] max-w-[380px] sm:right-6 sm:bottom-6 sm:max-w-[400px]">
+      className="fixed right-4 bottom-4 z-50 w-[calc(100vw-2rem)] max-w-[380px] sm:right-6 sm:bottom-6 sm:max-w-[420px]">
       <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-[#1f2023]/95 text-white shadow-2xl shadow-black/60 backdrop-blur-xl transition-all duration-300">
         {/* Top Dismiss Button */}
         <button
@@ -47,14 +54,25 @@ export const BackupToaster = () => {
         </button>
 
         {/* Main Card Content */}
-        <div className="flex items-center justify-between gap-4 p-4 pb-3.5">
+        <div className="flex items-center justify-between gap-3.5 p-4 pb-3.5">
           {/* Left info column */}
           <div className="flex min-w-0 flex-1 flex-col justify-between self-stretch">
             <div>
-              <p className="font-mono text-xs font-medium tracking-wide text-neutral-400">
-                {counterText}
-              </p>
-              <h4 className="mt-1 line-clamp-2 text-[14px] font-semibold leading-snug text-white/95">
+              {/* Counter and Real Byte Transfer */}
+              <div className="flex flex-wrap items-center gap-1.5 text-xs font-medium text-neutral-400">
+                <span className="font-mono">{counterText}</span>
+                {dataTransferText && (
+                  <>
+                    <span className="text-white/30">•</span>
+                    <span className="font-mono text-neutral-300">
+                      {dataTransferText}
+                    </span>
+                  </>
+                )}
+              </div>
+
+              {/* Status headline with speed or cloud syncing notice */}
+              <h4 className="mt-1 line-clamp-2 text-[13.5px] font-semibold leading-snug text-white/95">
                 {statusHeadline}
               </h4>
             </div>
@@ -98,38 +116,23 @@ export const BackupToaster = () => {
             </div>
           </div>
 
-          {/* Right Thumbnail preview */}
-          <div className="relative size-20 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-neutral-800 shadow-inner">
-            {currentPreviewUrl ?
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={currentPreviewUrl}
-                alt="Backing up preview"
-                className="size-full object-cover transition-opacity duration-200"
-              />
-            : <div className="grid size-full place-items-center text-white/40">
-                <Loader2 size={24} className="animate-spin" />
-              </div>
-            }
-
-            {/* Micro badge overlay on thumbnail */}
-            {isBackingUp && (
-              <span className="absolute right-1 bottom-1 grid size-5 place-items-center rounded-full bg-black/60 backdrop-blur-sm">
-                <Loader2
-                  size={12}
-                  className="animate-spin text-[#a8c7fa]"
-                />
-              </span>
-            )}
-            {isCompleted && (
-              <span className="absolute right-1 bottom-1 grid size-5 place-items-center rounded-full bg-emerald-500 text-black">
-                <Check size={12} strokeWidth={3} />
-              </span>
-            )}
-          </div>
+          {/* Right Thumbnail preview using ProgressiveImageCard (Blur -> Clear sweep + %) */}
+          {currentPreviewUrl ? (
+            <ProgressiveImageCard
+              src={currentPreviewUrl}
+              progress={queue[currentIndex]?.progress ?? overallProgress}
+              status={queue[currentIndex]?.status ?? "uploading"}
+              onCancel={isBackingUp ? stopBackup : undefined}
+              sizeClassName="size-20 sm:size-22 shrink-0"
+            />
+          ) : (
+            <div className="grid size-20 shrink-0 place-items-center rounded-xl border border-white/10 bg-neutral-800 text-white/40">
+              <Loader2 size={24} className="animate-spin" />
+            </div>
+          )}
         </div>
 
-        {/* Expandable Queue Items List */}
+        {/* Expandable Queue Items List with Real Bytes */}
         {isExpanded && (
           <div className="max-h-52 border-t border-white/10 bg-black/30 px-4 py-2.5 overflow-y-auto">
             <ul className="space-y-2">
@@ -137,28 +140,35 @@ export const BackupToaster = () => {
                 <li
                   key={item.id}
                   className="flex items-center justify-between gap-3 text-xs">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <span className="relative size-7 shrink-0 overflow-hidden rounded-md border border-white/10 bg-neutral-800">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={item.previewUrl}
-                        alt=""
-                        className="size-full object-cover"
-                      />
-                    </span>
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <ProgressiveImageCard
+                      src={item.previewUrl}
+                      progress={item.progress}
+                      status={item.status}
+                      onCancel={() => cancelItem(item.id)}
+                      sizeClassName="size-10 shrink-0"
+                      showPercentText={false}
+                    />
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium text-white/90">
                         {item.name}
                       </p>
-                      {item.error ?
-                        <p className="truncate text-[11px] text-red-400">
-                          {item.error}
-                        </p>
-                      : item.status === "uploading" ?
-                        <p className="text-[11px] text-[#a8c7fa]">
-                          {item.progress}%
-                        </p>
-                      : null}
+                      <div className="flex items-center gap-1.5 text-[11px] text-neutral-400">
+                        <span>{formatBytes(item.size)}</span>
+                        {item.status === "uploading" && (
+                          <span className="font-mono text-[#a8c7fa]">
+                            • {formatBytes(item.loadedBytes)} ({item.progress}%)
+                          </span>
+                        )}
+                        {item.status === "syncing" && (
+                          <span className="text-sky-300">• Syncing cloud…</span>
+                        )}
+                        {item.error && (
+                          <span className="truncate text-red-400">
+                            • {item.error}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -170,6 +180,12 @@ export const BackupToaster = () => {
                       <Loader2
                         size={14}
                         className="animate-spin text-[#a8c7fa]"
+                      />
+                    )}
+                    {item.status === "syncing" && (
+                      <CloudUpload
+                        size={14}
+                        className="animate-pulse text-sky-400"
                       />
                     )}
                     {item.status === "success" && (
@@ -188,15 +204,17 @@ export const BackupToaster = () => {
           </div>
         )}
 
-        {/* Real-time Progress Bar running along the bottom edge */}
-        <div className="h-1 w-full overflow-hidden bg-white/10">
+        {/* Real-time Progress Bar running along the bottom edge based on exact bytes */}
+        <div className="h-1.5 w-full overflow-hidden bg-white/10">
           <div
-            className={`h-full transition-all duration-200 ease-out ${
+            className={`h-full transition-all duration-150 ease-out ${
               isCompleted
                 ? "bg-emerald-400"
                 : isCancelled
                   ? "bg-amber-400"
-                  : "bg-[#a8c7fa]"
+                  : isSyncingCloud
+                    ? "bg-gradient-to-r from-[#a8c7fa] to-sky-300 animate-pulse"
+                    : "bg-[#a8c7fa]"
             }`}
             style={{ width: `${Math.max(0, Math.min(100, overallProgress))}%` }}
           />

@@ -3,7 +3,7 @@
 import { ImagePlus, Loader2, UploadCloud } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import type { ChangeEvent, DragEvent } from "react";
-import { useBackup } from "@/components/Backup";
+import { ProgressiveImageCard, useBackup } from "@/components/Backup";
 import { cn } from "@/lib/utils";
 import type { ImageRecord } from "@/lib/types";
 
@@ -22,7 +22,7 @@ const UploadSection = ({
 }: UploadSectionProps) => {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [dragging, setDragging] = useState(false);
-  const { startBackup, isBackingUp } = useBackup();
+  const { startBackup, isBackingUp, queue, cancelItem, stopBackup } = useBackup();
 
   const handleFiles = useCallback(
     (files: File[]) => {
@@ -134,6 +134,48 @@ const UploadSection = ({
           {isBackingUp ? "Backing up…" : "Choose images"}
         </button>
       </div>
+
+      {queue.length > 0 && (
+        <div className="vault-card space-y-3 rounded-2xl p-4 sm:p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-display text-sm font-semibold">
+                {isBackingUp ? "Uploading photos…" : "Upload queue"}
+              </p>
+              <p className="text-mist text-xs">
+                Photos clear up progressively as real network upload completes
+              </p>
+            </div>
+            {isBackingUp && (
+              <button
+                type="button"
+                onClick={stopBackup}
+                className="text-xs font-medium text-destructive transition hover:underline">
+                Cancel all
+              </button>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-3 pt-1 sm:gap-4">
+            {queue.map((item) => (
+              <div
+                key={item.id}
+                className="flex flex-col items-center gap-1.5">
+                <ProgressiveImageCard
+                  src={item.previewUrl}
+                  progress={item.progress}
+                  status={item.status}
+                  onCancel={() => cancelItem(item.id)}
+                  sizeClassName="size-24 sm:size-28"
+                />
+                <span className="text-mist max-w-24 truncate text-center text-[11px] font-medium">
+                  {item.name}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </section>
   );
 };
