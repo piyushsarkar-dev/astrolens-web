@@ -45,6 +45,7 @@ export const Lightbox = ({
 }: LightboxProps) => {
   const currentRecord = images[index];
   const [image, setImage] = useState<ImageRecord>(currentRecord);
+  const src = image?.displayUrl || image?.url || "";
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [isFavoriting, setIsFavoriting] = useState(false);
@@ -72,10 +73,18 @@ export const Lightbox = ({
     filter: currentRecord?.edits?.filter || "none",
   });
 
-  // Sync image record when index changes
+  const previousIdRef = useRef<string | null>(null);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+
+  // Sync image record when index or photo changes
   useEffect(() => {
-    if (currentRecord) {
-      setImage(currentRecord);
+    if (!currentRecord) return;
+    const isDifferentPhoto = currentRecord.id !== previousIdRef.current;
+    previousIdRef.current = currentRecord.id;
+
+    setImage(currentRecord);
+
+    if (isDifferentPhoto) {
       setLoading(true);
       setZoomScale(1);
       setPanPosition({ x: 0, y: 0 });
@@ -90,6 +99,13 @@ export const Lightbox = ({
       });
     }
   }, [currentRecord]);
+
+  // Check if image is already cached/complete
+  useEffect(() => {
+    if (imgRef.current && imgRef.current.complete && imgRef.current.naturalWidth > 0) {
+      setLoading(false);
+    }
+  }, [image.id, src]);
 
   const go = useCallback(
     (delta: number) => {
@@ -142,7 +158,6 @@ export const Lightbox = ({
 
   if (!image) return null;
 
-  const src = image.displayUrl || image.url;
 
   // Zoom helpers
   const handleZoom = (delta: number) => {
@@ -202,6 +217,12 @@ export const Lightbox = ({
     if (isFavoriting) return;
     const nextStatus = !image.isFavorite;
     setIsFavoriting(true);
+
+    // Optimistic UI update: heart turns red instantly with 0 delay
+    const optimisticRecord = { ...image, isFavorite: nextStatus };
+    setImage(optimisticRecord);
+    if (onUpdateImage) onUpdateImage(optimisticRecord);
+
     try {
       const res = await fetch(`/api/images/${encodeURIComponent(image.id)}`, {
         method: "PATCH",
@@ -218,6 +239,9 @@ export const Lightbox = ({
         );
       }
     } catch {
+      // Revert if error
+      setImage(image);
+      if (onUpdateImage) onUpdateImage(image);
       toast.error("Failed to toggle favorite.");
     } finally {
       setIsFavoriting(false);
@@ -517,6 +541,7 @@ export const Lightbox = ({
           style={{ transform: transformStyles }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
+            ref={imgRef}
             key={image.id}
             src={src}
             alt={image.title || "Photo"}
@@ -566,6 +591,9 @@ export const Lightbox = ({
         {isAlbumModalOpen && (
           <AddToAlbumModal
             image={image}
+            availableAlbums={Array.from(
+              new Set(images.flatMap((img) => img.albums || [])),
+            )}
             onClose={() => setIsAlbumModalOpen(false)}
             onUpdateImage={handleUpdateRecord}
           />

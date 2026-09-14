@@ -7,21 +7,14 @@ import type { ImageRecord } from "@/lib/types";
 
 type AddToAlbumModalProps = {
   image: ImageRecord;
+  availableAlbums?: string[];
   onClose: () => void;
   onUpdateImage: (updated: ImageRecord) => void;
 };
 
-const SUGGESTED_ALBUMS = [
-  "Favorites",
-  "Travel & Trips",
-  "Family & Friends",
-  "Portraits",
-  "Nature & Sky",
-  "Wallpapers",
-];
-
 export const AddToAlbumModal = ({
   image,
+  availableAlbums = [],
   onClose,
   onUpdateImage,
 }: AddToAlbumModalProps) => {
@@ -29,9 +22,9 @@ export const AddToAlbumModal = ({
   const [newAlbumName, setNewAlbumName] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // Combine suggested albums with any custom albums the photo has
+  // Combine known user albums with this photo's albums — no fake presets
   const allAvailableAlbums = Array.from(
-    new Set([...currentAlbums, ...SUGGESTED_ALBUMS]),
+    new Set([...currentAlbums, ...availableAlbums]),
   );
 
   const toggleAlbum = async (albumName: string) => {
@@ -81,7 +74,9 @@ export const AddToAlbumModal = ({
       role="dialog"
       aria-modal="true"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-150"
-      onClick={onClose}>
+      onClick={onClose}
+      onMouseDown={(e) => e.stopPropagation()}
+      onWheel={(e) => e.stopPropagation()}>
       <div
         className="w-full max-w-md rounded-3xl bg-[#18191c] border border-white/10 p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-150 text-foreground"
         onClick={(e) => e.stopPropagation()}>
@@ -95,7 +90,7 @@ export const AddToAlbumModal = ({
               <h3 className="font-display text-base font-semibold text-white">
                 Add to Album
               </h3>
-              <p className="text-mist text-xs">Organize your photo library</p>
+              <p className="text-mist text-xs">Organize your photos</p>
             </div>
           </div>
 
@@ -109,38 +104,46 @@ export const AddToAlbumModal = ({
 
         {/* Album List */}
         <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
-          {allAvailableAlbums.map((albumName) => {
-            const isSelected = currentAlbums.includes(albumName);
-            return (
-              <button
-                key={albumName}
-                type="button"
-                disabled={isUpdating}
-                onClick={() => void toggleAlbum(albumName)}
-                className={`flex w-full items-center justify-between rounded-2xl px-4 py-3 text-sm font-medium border transition cursor-pointer ${
-                  isSelected
-                    ? "bg-sky/20 border-sky/40 text-white"
-                    : "bg-white/[0.03] border-white/5 text-white/80 hover:bg-white/[0.07]"
-                }`}>
-                <div className="flex items-center gap-3">
-                  <Folder
-                    size={18}
-                    className={isSelected ? "text-sky" : "text-amber-400"}
-                  />
-                  <span>{albumName}</span>
-                </div>
-
-                <div
-                  className={`grid size-5 place-items-center rounded-full border transition ${
+          {allAvailableAlbums.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-xs text-mist space-y-1">
+              <Folder className="mx-auto size-6 text-mist/60" />
+              <p className="font-medium text-white/80">No albums yet</p>
+              <p>Type a name below to create your first album.</p>
+            </div>
+          ) : (
+            allAvailableAlbums.map((albumName) => {
+              const isSelected = currentAlbums.includes(albumName);
+              return (
+                <button
+                  key={albumName}
+                  type="button"
+                  disabled={isUpdating}
+                  onClick={() => void toggleAlbum(albumName)}
+                  className={`flex w-full items-center justify-between rounded-2xl px-4 py-3 text-sm font-medium border transition cursor-pointer ${
                     isSelected
-                      ? "bg-sky border-sky text-white"
-                      : "border-white/20 text-transparent"
+                      ? "bg-sky/20 border-sky/40 text-white"
+                      : "bg-white/[0.03] border-white/5 text-white/80 hover:bg-white/[0.07]"
                   }`}>
-                  <Check size={12} strokeWidth={3} />
-                </div>
-              </button>
-            );
-          })}
+                  <div className="flex items-center gap-3">
+                    <Folder
+                      size={18}
+                      className={isSelected ? "text-sky" : "text-amber-400"}
+                    />
+                    <span>{albumName}</span>
+                  </div>
+
+                  <div
+                    className={`grid size-5 place-items-center rounded-full border transition ${
+                      isSelected
+                        ? "bg-sky border-sky text-white"
+                        : "border-white/20 text-transparent"
+                    }`}>
+                    <Check size={12} strokeWidth={3} />
+                  </div>
+                </button>
+              );
+            })
+          )}
         </div>
 
         {/* Create New Album Input */}
@@ -160,7 +163,7 @@ export const AddToAlbumModal = ({
                   void handleCreateNewAlbum();
                 }
               }}
-              placeholder="Album title..."
+              placeholder="e.g. Vacations, Portfolio..."
               className="flex-1 rounded-xl bg-white/[0.05] border border-white/10 px-3.5 py-2 text-xs text-white placeholder:text-mist focus:outline-none focus:border-sky"
             />
 

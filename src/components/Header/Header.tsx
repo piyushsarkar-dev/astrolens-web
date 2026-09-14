@@ -1,6 +1,6 @@
 "use client";
 
-import { Aperture, UploadCloud } from "lucide-react";
+import { Aperture, Heart, UploadCloud } from "lucide-react";
 import Link from "next/link";
 import ThemeToggleButton from "../ThemeToggleButton";
 import UserMenu from "../Auth/UserMenu";
@@ -37,8 +37,16 @@ const Header = () => {
         <nav className="flex items-center gap-2">
           <Link
             href={"/"}
-            className="bg-foreground/[0.04] ring-line-subtle hover:bg-foreground/[0.09] rounded-full px-4 py-1.5 text-sm font-medium ring-1 backdrop-blur transition">
-            Home
+            className="bg-foreground/[0.04] ring-line-subtle hover:bg-foreground/[0.09] rounded-full px-3.5 py-1.5 text-sm font-medium ring-1 backdrop-blur transition">
+            Photos
+          </Link>
+
+          <Link
+            href={"/?view=favorites"}
+            className="bg-foreground/[0.04] ring-line-subtle hover:bg-foreground/[0.09] inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium ring-1 backdrop-blur transition text-rose-400 hover:text-rose-300"
+            title="View Favorites">
+            <Heart size={14} className="fill-rose-400" />
+            <span>Favorites</span>
           </Link>
 
           <button
