@@ -7,8 +7,23 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-jakarta);
   --font-mono: var(--font-geist-mono);
+  --color-canvas: var(--canvas);
+  --color-vault-lowest: var(--vault-lowest);
+  --color-vault-low: var(--vault-low);
+  --color-vault-high: var(--vault-high);
+  --color-glass: var(--glass);
+  --color-sky: var(--sky);
+  --color-leaf: var(--leaf);
+  --color-gold: var(--gold);
+  --color-night: var(--night);
+  --color-mist: var(--mist);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-line-subtle: var(--line-subtle);
+  --color-line-strong: var(--line-strong);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -48,8 +63,22 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --background: #e9ebe8;
+  --foreground: #16181b;
+  --canvas: #e9ebe8;
+  --vault-lowest: #f4f5f3;
+  --vault-low: #ffffff;
+  --vault-high: #ffffff;
+  --glass: rgba(255, 255, 255, 0.72);
+  --sky: #1668d9;
+  --leaf: #2f7d32;
+  --gold: #9a6200;
+  --night: #16181b;
+  --mist: #5b6359;
+  --success: #2f7d32;
+  --success-foreground: #ffffff;
+  --line-subtle: rgba(22, 24, 27, 0.1);
+  --line-strong: rgba(22, 24, 27, 0.2);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
@@ -71,7 +100,14 @@
   --chart-3: oklch(0.546 0.245 262.881);
   --chart-4: oklch(0.488 0.243 264.376);
   --chart-5: oklch(0.424 0.199 265.638);
-  --radius: 0.45rem;
+  --radius: 0.625rem;
+  --shadow-vault-ambient: 0 8px 32px rgba(0, 0, 0, 0.56);
+  --shadow-vault-deep: 0 16px 48px rgba(0, 0, 0, 0.8);
+  --vault-top-glow: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.16) 0%,
+    rgba(255, 255, 255, 0) 100%
+  );
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -83,8 +119,22 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
+  --background: #0b0c0e;
+  --foreground: #e3e2e6;
+  --canvas: #0b0c0e;
+  --vault-lowest: #121316;
+  --vault-low: #181a1f;
+  --vault-high: #22252c;
+  --glass: rgba(24, 26, 31, 0.72);
+  --sky: #1e88e5;
+  --leaf: #4caf50;
+  --gold: #f59e0b;
+  --night: #e3e2e6;
+  --mist: rgba(255, 255, 255, 0.6);
+  --success: #388e3c;
+  --success-foreground: #ffffff;
+  --line-subtle: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.14);
   --card: oklch(0.205 0 0);
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
@@ -116,12 +166,79 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+.glass-bar {
+  background: var(--glass);
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--shadow-vault-ambient);
+}
+
+.vault-card {
+  background: var(--vault-low);
+  border: 1px solid var(--line-subtle);
+  box-shadow: none;
+}
+
+.vault-modal {
+  background: var(--vault-low);
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--shadow-vault-deep);
+  position: relative;
+}
+
+.vault-modal::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: var(--vault-top-glow);
+  pointer-events: none;
+}
+
+@media (max-width: 599px) {
+  .vault-masonry {
+    column-gap: 0.25rem;
+  }
+
+  .vault-masonry > * {
+    margin-bottom: 0.25rem;
+  }
+}
+
+@media (min-width: 600px) and (max-width: 1024px) {
+  .vault-masonry {
+    column-gap: 0.75rem;
+  }
+
+  .vault-masonry > * {
+    margin-bottom: 0.75rem;
+  }
+}
+
+@media (min-width: 1025px) {
+  .vault-masonry {
+    column-gap: 1rem;
+  }
+
+  .vault-masonry > * {
+    margin-bottom: 1rem;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans tracking-[-0.01em];
+    background: var(--canvas);
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
   }
   button:not(:disabled),
   [role="button"]:not(:disabled) {

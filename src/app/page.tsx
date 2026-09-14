@@ -1,19 +1,19 @@
-import { Metadata } from "next";
+import type { Metadata } from "next";
+import GalleryPage from "@/components/Gallery/GalleryPage";
+import { readImages, sortImagesNewestFirst } from "@/lib/imgbb";
 
 export const metadata: Metadata = {
-  title: "Nextjs Starter Frontend",
-  description: "Production grade Next.js starter template",
+  title: "Photos — Astro Lens",
+  description:
+    "A Google Photos-style gallery powered by ImgBB. Upload, browse and sync your photos.",
 };
 
-const page = () => {
-  return (
-    <section className="grid h-[90dvh] place-items-center">
-      <div className="space-y-2 text-center">
-        <h1 className="text-5xl font-semibold">Nextjs Starter Frontend</h1>
-        <h2 className="text-3xl">Production grade Next.js starter template</h2>
-      </div>
-    </section>
-  );
+export const dynamic = "force-dynamic";
+
+const HomePage = async () => {
+  const images = sortImagesNewestFirst(await readImages());
+
+  return <GalleryPage initialImages={images} />;
 };
 
-export default page;
+export default HomePage;

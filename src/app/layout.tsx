@@ -1,6 +1,6 @@
 import Header from "@/components/Header/Header";
 import ThemeProvider from "@/components/Providers/ThemeProvider";
-import { geistMono, geistSans } from "@/lib/fonts";
+import { geistMono, inter, jakarta } from "@/lib/fonts";
 import { ReactNode } from "react";
 import "./globals.css";
 
@@ -12,7 +12,7 @@ const RootLayout = ({ children }: Readonly<RootLayoutProps>) => {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      className={`${inter.variable} ${jakarta.variable} ${geistMono.variable} antialiased`}
       suppressHydrationWarning>
       <body>
         <ThemeProvider
@@ -21,7 +21,9 @@ const RootLayout = ({ children }: Readonly<RootLayoutProps>) => {
           enableSystem={false}>
           <Header />
 
-          <main className="mx-auto max-w-7xl px-6 py-3">{children}</main>
+          <main className="mx-auto w-full max-w-[1440px] px-4 py-3 sm:px-6 lg:px-8">
+            {children}
+          </main>
         </ThemeProvider>
       </body>
     </html>
