@@ -1,7 +1,7 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
-import { useCallback, useEffect } from "react";
+import { ChevronLeft, ChevronRight, Loader2, Trash2, X } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import type { ImageRecord } from "@/lib/types";
 
 type LightboxProps = {
@@ -9,10 +9,12 @@ type LightboxProps = {
   index: number;
   onClose: () => void;
   onNavigate: (index: number) => void;
+  onDelete?: (image: ImageRecord) => Promise<void>;
 };
 
-const Lightbox = ({ images, index, onClose, onNavigate }: LightboxProps) => {
+const Lightbox = ({ images, index, onClose, onNavigate, onDelete }: LightboxProps) => {
   const image = images[index];
+  const [deleting, setDeleting] = useState(false);
 
   const go = useCallback(
     (delta: number) => {
@@ -40,6 +42,20 @@ const Lightbox = ({ images, index, onClose, onNavigate }: LightboxProps) => {
 
   const imageSrc = image.url || image.displayUrl;
 
+  const handleDelete = async () => {
+    if (!onDelete || deleting) return;
+    const confirmed = window.confirm(
+      `Delete "${image.title || "this photo"}" permanently?\n\nIt will be removed from ImgBB AND your gallery. This cannot be undone.`,
+    );
+    if (!confirmed) return;
+    setDeleting(true);
+    try {
+      await onDelete(image);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div
       role="dialog"
@@ -51,9 +67,24 @@ const Lightbox = ({ images, index, onClose, onNavigate }: LightboxProps) => {
         type="button"
         onClick={onClose}
         aria-label="Close viewer"
-        className="bg-foreground/[0.08] ring-line-strong hover:bg-foreground/[0.16] absolute top-4 right-4 grid size-10 place-items-center rounded-full text-white ring-1 transition">
+        className="bg-foreground/[0.08] ring-line-strong hover:bg-foreground/[0.16] absolute top-4 right-4 z-10 grid size-10 place-items-center rounded-full text-white ring-1 transition">
         <X size={22} />
       </button>
+
+      {onDelete && (
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            void handleDelete();
+          }}
+          disabled={deleting}
+          aria-label="Delete photo"
+          title="Delete from ImgBB and your gallery"
+          className="ring-destructive/50 hover:bg-destructive absolute top-4 right-16 z-10 grid size-10 place-items-center rounded-full bg-red-500/20 text-white ring-1 transition disabled:opacity-60">
+          {deleting ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
+        </button>
+      )}
 
       <button
         type="button"

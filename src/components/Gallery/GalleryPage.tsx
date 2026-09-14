@@ -77,6 +77,29 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
 
   const handleError = useCallback((message: string) => setError(message), []);
 
+  const handleDelete = useCallback(
+    async (image: ImageRecord) => {
+      setError(null);
+      try {
+        const response = await fetch(`/api/images/${encodeURIComponent(image.id)}`, {
+          method: "DELETE",
+        });
+        const json = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        if (!response.ok) {
+          throw new Error(json?.error ?? "Could not delete the photo.");
+        }
+        // Remove from the grid and close the viewer if it was open.
+        setImages((previous) => previous.filter((item) => item.id !== image.id));
+        setSelectedIndex((current) => (current === null ? null : null));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Delete failed.");
+      }
+    },
+    [],
+  );
+
   return (
     <section className="space-y-6 pt-24 pb-10 sm:pt-28">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -135,16 +158,16 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
         </div>
       )}
 
-      {!authLoading && user && !hasImgbbKey && (
+            {!authLoading && user && !hasImgbbKey && (
         <div className="vault-card flex flex-wrap items-center gap-3 rounded-2xl p-4 text-sm sm:p-6">
           <span className="bg-amber-500/10 text-amber-500 ring-line-subtle grid size-10 shrink-0 place-items-center rounded-full ring-1">
             <KeyRound size={18} aria-hidden />
           </span>
           <div className="min-w-0 flex-1">
             <p className="font-display text-base font-semibold">Add your ImgBB API key to enable uploads</p>
-            <p className="text-mist mt-0.5 text-sm">Save your personal key on your profile page — it is free at api.imgbb.com.</p>
+            <p className="text-mist mt-0.5 text-sm">Save your personal key — open Settings from your account menu. It is free at api.imgbb.com.</p>
           </div>
-          <a href="/profile" className="bg-sky rounded-full px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-sky/90">Open profile</a>
+          <a href="/settings" className="bg-sky rounded-full px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-sky/90">Open Settings</a>
         </div>
       )}
 
@@ -179,11 +202,12 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
       />
 
       {selectedIndex !== null && visibleImages.length > 0 && (
-        <Lightbox
+                        <Lightbox
           images={visibleImages}
           index={selectedIndex}
           onClose={() => setSelectedIndex(null)}
           onNavigate={setSelectedIndex}
+          onDelete={user ? handleDelete : undefined}
         />
       )}
     </section>

@@ -151,6 +151,26 @@ export async function uploadImageToImgbb(
   return image;
 }
 
+export async function deleteImageFromImgbb(
+  deleteToken: string,
+  apiKey: string,
+): Promise<void> {
+  const response = await fetch(
+    `${IMGBB_API_BASE}/delete/${encodeURIComponent(deleteToken)}?key=${encodeURIComponent(apiKey)}`,
+    { method: "GET", cache: "no-store" },
+  );
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const json: any = await response.json().catch(() => null);
+
+  const ok = response.ok && json?.success === true;
+  if (!ok) {
+    const message =
+      typeof json?.error === "string" ? json.error : json?.error?.message;
+    throw new Error(message || `ImgBB delete failed (HTTP ${response.status}).`);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Local registry — records every image uploaded through this app so the
 // gallery keeps showing "old" photos. The public ImgBB API v1 only documents
@@ -219,6 +239,22 @@ export async function getImageById(
     images.find((item) => item.displayUrl.toLowerCase().endsWith(`/${slug}`)) ||
     null
   );
+}
+
+/** Remove an image record from the registry (after deleting on ImgBB). */
+export async function removeImage(
+  id: string,
+  ownerId?: string | null,
+): Promise<void> {
+  const all = await readImages();
+  const kept = all.filter(
+    (item) =>
+      !(
+        item.id.toLowerCase() === id.toLowerCase() &&
+        (ownerId === undefined || (item.ownerId ?? null) === (ownerId ?? null))
+      ),
+  );
+  await writeImages(kept);
 }
 
 export function sortImagesNewestFirst(images: ImageRecord[]): ImageRecord[] {
