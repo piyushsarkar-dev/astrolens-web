@@ -2,11 +2,15 @@
 import NiceAvatar, { genConfig } from "react-nice-avatar";
 import { cn } from "@/lib/utils";
 
+export type AvatarConfig = ReturnType<typeof genConfig>;
+
 type UserAvatarProps = {
   /** Stable seed (user id) — same account always gets the same generated avatar. */
   seed: string;
   /** Google/other provider photo. When present, it wins over the generated one. */
   avatarUrl?: string | null;
+  /** Exact avatar chosen at signup (saved in user metadata). Wins over seed. */
+  avatarConfig?: AvatarConfig | null;
   /** Pixel size (square). */
   size?: number;
   className?: string;
@@ -14,10 +18,10 @@ type UserAvatarProps = {
 
 /**
  * Google login → shows the Google profile photo.
- * Email login → generates a fun illustrated avatar from the user id
- * ("surprise me" — deterministic, so it never changes between reloads).
+ * Email login → shows the avatar picked at signup (saved config), falling
+ * back to a deterministic "surprise me" avatar generated from the user id.
  */
-const UserAvatar = ({ seed, avatarUrl, size = 32, className }: UserAvatarProps) => {
+const UserAvatar = ({ seed, avatarUrl, avatarConfig, size = 32, className }: UserAvatarProps) => {
   if (avatarUrl) {
     return (
       /* eslint-disable-next-line @next/next/no-img-element -- remote provider avatar */
@@ -33,7 +37,7 @@ const UserAvatar = ({ seed, avatarUrl, size = 32, className }: UserAvatarProps) 
     );
   }
 
-  const config = genConfig(seed || "astrolens");
+  const config = avatarConfig ?? genConfig(seed || "astrolens");
   return (
     <NiceAvatar
       style={{ width: size, height: size }}

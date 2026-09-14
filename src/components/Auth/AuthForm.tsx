@@ -3,6 +3,8 @@ import { Aperture, Loader2, MailCheck } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState, type FormEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
+import NiceAvatar, { genConfig } from "react-nice-avatar";
+import type { AvatarConfig } from "./UserAvatar";
 export type AuthMode = "login" | "signup";
 type AuthFormProps = { initialMode?: AuthMode };
 const emailRedirect = () =>
@@ -31,6 +33,7 @@ const Inner = ({ initialMode = "login" }: AuthFormProps) => {
       : null,
   );
   const [needsConfirm, setNeedsConfirm] = useState(false);
+  const [signupAvatar, setSignupAvatar] = useState<AvatarConfig>(() => genConfig());
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [cooldown, setCooldown] = useState(0);
@@ -89,7 +92,10 @@ const Inner = ({ initialMode = "login" }: AuthFormProps) => {
         const { data, error: e } = await supabase.auth.signUp({
           email: email.trim(), password,
           options: {
-            data: { display_name: displayName.trim() || email.split("@")[0] },
+            data: {
+              display_name: displayName.trim() || email.split("@")[0],
+              avatar_config: signupAvatar,
+            },
             emailRedirectTo: emailRedirect(),
           },
         });
@@ -168,6 +174,20 @@ const Inner = ({ initialMode = "login" }: AuthFormProps) => {
               <span className="mb-1.5 block text-sm font-medium">Display name</span>
               <input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="e.g. Piyush" autoComplete="nickname" className="bg-vault-lowest ring-line-subtle w-full rounded-xl px-4 py-2.5 text-sm ring-1 outline-none focus:ring-2 focus:ring-sky/60" />
             </label>
+          )}
+          {mode === "signup" && (
+            <div className="ring-line-subtle flex flex-wrap items-center gap-4 rounded-2xl p-4 ring-1">
+              <NiceAvatar style={{ width: 64, height: 64 }} shape="circle" {...signupAvatar} className="shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold">Pick your avatar</p>
+                <p className="text-mist mt-0.5 text-xs">Saved to your account when you create it.</p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  <button type="button" onClick={() => setSignupAvatar(genConfig({ sex: "man" }))} className={signupAvatar.sex === "man" ? "bg-sky rounded-full px-3 py-1 text-xs font-semibold text-white transition" : "bg-foreground/[0.04] ring-line-subtle hover:bg-foreground/[0.09] rounded-full px-3 py-1 text-xs font-medium ring-1 transition"}>Male</button>
+                  <button type="button" onClick={() => setSignupAvatar(genConfig({ sex: "woman" }))} className={signupAvatar.sex === "woman" ? "bg-sky rounded-full px-3 py-1 text-xs font-semibold text-white transition" : "bg-foreground/[0.04] ring-line-subtle hover:bg-foreground/[0.09] rounded-full px-3 py-1 text-xs font-medium ring-1 transition"}>Female</button>
+                  <button type="button" onClick={() => setSignupAvatar(genConfig())} className="bg-foreground/[0.04] ring-line-subtle hover:bg-foreground/[0.09] rounded-full px-3 py-1 text-xs font-medium ring-1 transition">🎲 Surprise me</button>
+                </div>
+              </div>
+            </div>
           )}
           <label className="block">
             <span className="mb-1.5 block text-sm font-medium">Email</span>

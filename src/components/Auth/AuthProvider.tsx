@@ -3,10 +3,12 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/lib/types";
+import type { AvatarConfig } from "./UserAvatar";
 type AuthContextValue = {
   user: User | null;
   profile: Profile | null;
   avatarUrl: string | null;
+  avatarConfig: AvatarConfig | null;
   loading: boolean;
   profileLoading: boolean;
   hasImgbbKey: boolean;
@@ -17,6 +19,7 @@ const AuthContext = createContext<AuthContextValue>({
   user: null,
   profile: null,
   avatarUrl: null,
+  avatarConfig: null,
   loading: true,
   profileLoading: false,
   hasImgbbKey: false,
@@ -91,6 +94,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           (user?.user_metadata?.avatar_url as string | undefined) ??
           (user?.user_metadata?.picture as string | undefined) ??
           null,
+        avatarConfig:
+          (user?.user_metadata?.avatar_config as AvatarConfig | undefined) ?? null,
         loading,
         profileLoading,
         hasImgbbKey: Boolean(profile?.imgbb_api_key?.trim()),

@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "./AuthProvider";
 import UserAvatar from "./UserAvatar";
 const UserMenu = () => {
-  const { user, avatarUrl, loading, signOut } = useAuth();
+  const { user, avatarUrl, avatarConfig, loading, signOut } = useAuth();
   const router = useRouter();
   const loginPath = "/" as never;
   if (loading) {
@@ -21,7 +21,7 @@ const UserMenu = () => {
   return (
     <div className="flex items-center gap-2">
       <a href="/profile" title={label} className="bg-foreground/[0.04] ring-line-subtle hover:bg-foreground/[0.09] flex items-center gap-2 rounded-full py-1 pr-3 pl-1 text-sm font-medium ring-1 backdrop-blur transition">
-        <UserAvatar seed={user.id} avatarUrl={avatarUrl} size={26} aria-hidden />
+        <UserAvatar seed={user.id} avatarUrl={avatarUrl} avatarConfig={avatarConfig} size={26} aria-hidden />
         <span className="hidden max-w-28 truncate sm:block">{label}</span>
         <UserRound size={14} className="text-mist" aria-hidden />
       </a>

@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/Auth/AuthProvider";
 import UserAvatar from "@/components/Auth/UserAvatar";
 const ProfilePage = () => {
-  const { user, profile, avatarUrl, loading, profileLoading, refreshProfile } = useAuth();
+  const { user, profile, avatarUrl, avatarConfig, loading, profileLoading, refreshProfile } = useAuth();
   const [name, setName] = useState("");
   const [imgbbKey, setImgbbKey] = useState("");
   const [showKey, setShowKey] = useState(false);
@@ -60,7 +60,7 @@ const ProfilePage = () => {
     <section className="mx-auto w-full max-w-md pt-28 pb-16 sm:pt-32">
       <div className="vault-card rounded-3xl p-6 sm:p-8">
         <div className="flex items-center gap-4">
-          <UserAvatar seed={user.id} avatarUrl={avatarUrl} size={64} />
+          <UserAvatar seed={user.id} avatarUrl={avatarUrl} avatarConfig={avatarConfig} size={64} />
           <div className="min-w-0">
             <h2 className="font-display text-2xl font-bold">Your profile</h2>
             <p className="text-mist mt-1 truncate text-sm">{user.email}</p>
