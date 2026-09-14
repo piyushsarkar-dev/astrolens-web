@@ -9,7 +9,6 @@ import {
   Loader2,
   X,
 } from "lucide-react";
-import Image from "next/image";
 import { useBackup } from "./BackupContext";
 
 export const BackupToaster = () => {
@@ -102,6 +101,7 @@ export const BackupToaster = () => {
           {/* Right Thumbnail preview */}
           <div className="relative size-20 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-neutral-800 shadow-inner">
             {currentPreviewUrl ?
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={currentPreviewUrl}
                 alt="Backing up preview"
@@ -133,12 +133,13 @@ export const BackupToaster = () => {
         {isExpanded && (
           <div className="max-h-52 border-t border-white/10 bg-black/30 px-4 py-2.5 overflow-y-auto">
             <ul className="space-y-2">
-              {queue.map((item, idx) => (
+              {queue.map((item) => (
                 <li
                   key={item.id}
                   className="flex items-center justify-between gap-3 text-xs">
                   <div className="flex min-w-0 items-center gap-2">
                     <span className="relative size-7 shrink-0 overflow-hidden rounded-md border border-white/10 bg-neutral-800">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={item.previewUrl}
                         alt=""

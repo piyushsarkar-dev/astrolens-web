@@ -94,9 +94,10 @@ export const BackupProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Clean up created object URLs when unmounting
   useEffect(() => {
+    const urls = createdUrlsRef.current;
     return () => {
       if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
-      for (const url of createdUrlsRef.current) {
+      for (const url of urls) {
         URL.revokeObjectURL(url);
       }
     };
