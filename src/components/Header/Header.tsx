@@ -1,6 +1,7 @@
 "use client";
 
-import { Aperture, Heart, UploadCloud } from "lucide-react";
+import { Heart, UploadCloud } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import ThemeToggleButton from "../ThemeToggleButton";
 import UserMenu from "../Auth/UserMenu";
@@ -17,9 +18,14 @@ const Header = () => {
         <Link
           href={"/"}
           className="flex items-center gap-3">
-          <span className="bg-success/15 text-success ring-line-subtle grid size-9 shrink-0 place-items-center rounded-full ring-1">
-            <Aperture size={20} />
-          </span>
+          <Image
+            src="/logo.png"
+            alt="Astro Lens logo"
+            width={36}
+            height={36}
+            priority
+            className="shrink-0 rounded-full object-cover ring-1 ring-line-subtle"
+          />
 
           <span className="leading-none">
             <h1
