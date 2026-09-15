@@ -1,8 +1,9 @@
 "use client";
 
 import { Check, Heart, MapPin } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { ImageRecord } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import type { GridDensity, TimeFilterMode } from "./AstroTopNav";
 
 type AstroTimelineGridProps = {
@@ -140,20 +141,21 @@ export const AstroTimelineGrid = ({
 
   const getGridClass = () => {
     if (gridDensity === "compact")
-      return "grid-cols-2 md:grid-cols-3 lg:grid-cols-4";
-    if (gridDensity === "large") return "grid-cols-1 md:grid-cols-2";
-    return "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3";
+      return "columns-2 sm:columns-3 md:columns-4 lg:columns-5 xl:columns-6 gap-3 sm:gap-3.5";
+    if (gridDensity === "large")
+      return "columns-1 sm:columns-2 md:columns-2 lg:columns-3 gap-4 sm:gap-5";
+    return "columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-3.5 sm:gap-4";
   };
 
   if (images.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-2 rounded-3xl border border-dashed border-line-subtle py-20 text-center">
+      <div className="flex flex-col items-center gap-2 rounded-3xl border border-dashed border-border py-20 text-center">
         <p className="text-sm font-medium text-foreground/60">
           {searchQuery.trim() ?
             `No photos match “${searchQuery.trim()}”`
           : "No photos found in this view"}
         </p>
-        <p className="text-xs text-foreground/35">
+        <p className="text-xs text-muted-foreground">
           {searchQuery.trim() ?
             "Try a different keyword, or clear the search to see everything."
           : "Upload a photo or switch to another album to fill this view."}
@@ -181,10 +183,10 @@ export const AstroTimelineGrid = ({
                   {group.title}
                 </h2>
                 {group.location && (
-                  <span className="flex items-center gap-1 text-xs font-medium text-foreground/40">
+                  <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
                     <MapPin
                       size={11}
-                      className="text-foreground/30"
+                      className="text-muted-foreground/60"
                     />
                     {group.location}
                   </span>
@@ -192,121 +194,225 @@ export const AstroTimelineGrid = ({
               </div>
 
               <div className="flex items-center gap-3 text-xs">
-                <span className="text-foreground/40">
+                <span className="text-muted-foreground">
                   {group.images.length}{" "}
                   {group.images.length === 1 ? "capture" : "captures"}
                 </span>
                 <button
                   type="button"
                   onClick={() => onSelectGroup(groupItemIds)}
-                  className="cursor-pointer font-medium text-foreground/50 transition hover:text-foreground">
+                  className="cursor-pointer font-medium text-muted-foreground transition hover:text-foreground">
                   {allGroupSelected ? "Deselect all" : "Select all"}
                 </button>
               </div>
             </div>
 
-            {/* Photos Grid */}
-            <div className={`grid gap-3.5 ${getGridClass()}`}>
-              {group.images.map(({ item, globalIndex }) => {
-                const isSelected = selectedIds.has(item.id);
-                const tag = getFormatTag(item);
-
-                return (
-                  <div
-                    key={item.id}
-                    className={`group relative overflow-hidden rounded-2xl border bg-vault-low transition duration-200 ${
-                      isSelected ?
-                        "border-sky ring-sky/50 ring-2"
-                      : "border-line-subtle hover:border-line-strong hover:shadow-[0_12px_36px_rgba(0,0,0,0.6)]"
-                    }`}>
-                    {/* Top Format Tag Badge */}
-                    <div className="pointer-events-none absolute top-2.5 left-2.5 z-10">
-                      <span
-                        className={`inline-block rounded-md border bg-black/60 px-2 py-0.5 font-mono text-[10px] font-medium backdrop-blur-md ${tag.color}`}>
-                        {tag.label}
-                      </span>
-                    </div>
-
-                    {/* Top Right Favorite Heart */}
-                    <button
-                      type="button"
-                      onClick={(e) => onToggleFavorite(item, e)}
-                      className="absolute top-2.5 right-2.5 z-10 grid size-7 cursor-pointer place-items-center rounded-full border border-white/10 bg-black/50 backdrop-blur-md transition hover:bg-black/80"
-                      title={
-                        item.isFavorite ? "Remove favorite" : "Add to favorites"
-                      }>
-                      <Heart
-                        size={13}
-                        className={
-                          item.isFavorite ?
-                            "fill-[#ff2a6d] text-[#ff2a6d]"
-                          : "text-foreground/70 hover:text-foreground"
-                        }
-                      />
-                    </button>
-
-                    {/* Multi-Select Checkbox */}
-                    {isSelectMode && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onToggleSelectItem(item.id);
-                        }}
-                        className={`absolute bottom-2.5 left-2.5 z-10 grid size-6 cursor-pointer place-items-center rounded-lg transition ${
-                          isSelected ?
-                            "bg-sky border-sky border text-white"
-                          : "border border-white/20 bg-black/60 text-transparent hover:border-white/50"
-                        }`}>
-                        <Check
-                          size={13}
-                          strokeWidth={3}
-                        />
-                      </button>
-                    )}
-
-                    {/* Image Surface */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        // In select mode a tap toggles selection instead of
-                        // opening the lightbox.
-                        if (isSelectMode) {
-                          onToggleSelectItem(item.id);
-                          return;
-                        }
-                        onSelectImage(globalIndex);
-                      }}
-                      aria-pressed={isSelectMode ? isSelected : undefined}
-                      className="block aspect-[4/3] w-full cursor-pointer overflow-hidden">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={item.displayUrl || item.url}
-                        alt={item.title || "Capture"}
-                        loading="lazy"
-                        decoding="async"
-                        className="h-full w-full object-cover transition-transform duration-300 will-change-transform group-hover:scale-[1.03]"
-                      />
-                    </button>
-
-                    {/* Hover Title Overlay */}
-                    <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent p-3 pt-6 opacity-0 transition duration-200 group-hover:opacity-100">
-                      <p className="truncate text-xs font-semibold text-foreground">
-                        {item.title || "Untitled Capture"}
-                      </p>
-                      {item.metadata?.camera && (
-                        <p className="truncate text-[10px] text-foreground/60">
-                          {item.metadata.camera} · {item.metadata.shutter || ""}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+            {/* Photos Auto-Adjusting Pinterest-style Masonry Flow */}
+            <div className={cn("w-full", getGridClass())}>
+              {group.images.map(({ item, globalIndex }) => (
+                <AstroPhotoCard
+                  key={item.id}
+                  item={item}
+                  globalIndex={globalIndex}
+                  isSelected={selectedIds.has(item.id)}
+                  isSelectMode={isSelectMode}
+                  onSelectImage={onSelectImage}
+                  onToggleSelectItem={onToggleSelectItem}
+                  onToggleFavorite={onToggleFavorite}
+                  tag={getFormatTag(item)}
+                />
+              ))}
             </div>
           </div>
         );
       })}
+    </div>
+  );
+};
+
+type AstroPhotoCardProps = {
+  item: ImageRecord;
+  globalIndex: number;
+  isSelected: boolean;
+  isSelectMode: boolean;
+  onSelectImage: (index: number) => void;
+  onToggleSelectItem: (id: string) => void;
+  onToggleFavorite: (image: ImageRecord, e: React.MouseEvent) => void;
+  tag: { label: string; color: string };
+};
+
+const AstroPhotoCard = ({
+  item,
+  globalIndex,
+  isSelected,
+  isSelectMode,
+  onSelectImage,
+  onToggleSelectItem,
+  onToggleFavorite,
+  tag,
+}: AstroPhotoCardProps) => {
+  // Capture natural image dimensions so that even if width/height is 0 in database,
+  // the card dynamically auto-adjusts its height upon image load.
+  const [naturalSize, setNaturalSize] = useState<{
+    width: number;
+    height: number;
+  } | null>(() =>
+    item.width > 0 && item.height > 0 ?
+      { width: item.width, height: item.height }
+    : null,
+  );
+
+  const effectiveWidth = naturalSize?.width || item.width || 0;
+  const effectiveHeight = naturalSize?.height || item.height || 0;
+  const hasDimensions = effectiveWidth > 0 && effectiveHeight > 0;
+  const isPortrait = hasDimensions && effectiveHeight > effectiveWidth * 1.15;
+  const isPanoramic = hasDimensions && effectiveWidth > effectiveHeight * 1.8;
+
+  const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+      if (
+        !naturalSize ||
+        naturalSize.width !== img.naturalWidth ||
+        naturalSize.height !== img.naturalHeight
+      ) {
+        setNaturalSize({
+          width: img.naturalWidth,
+          height: img.naturalHeight,
+        });
+      }
+    }
+  };
+
+  return (
+    <div
+      className={cn(
+        "group relative mb-3.5 sm:mb-4 inline-block w-full break-inside-avoid overflow-hidden rounded-2xl border bg-card text-card-foreground transition-all duration-200",
+        isSelected ?
+          "border-primary ring-2 ring-primary/50 shadow-md"
+        : "border-border hover:border-line-strong hover:shadow-[0_12px_36px_rgba(0,0,0,0.25)] dark:hover:shadow-[0_12px_36px_rgba(0,0,0,0.7)]",
+      )}
+      style={{ transform: "translateZ(0)" }}>
+      {/* Top Left Format & Orientation Badges */}
+      <div className="pointer-events-none absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5">
+        <span
+          className={cn(
+            "inline-block rounded-md border bg-black/60 px-2 py-0.5 font-mono text-[10px] font-medium backdrop-blur-md shadow-sm",
+            tag.color,
+          )}>
+          {tag.label}
+        </span>
+        {isPortrait && (
+          <span className="hidden sm:inline-block rounded-md border border-white/15 bg-black/40 px-1.5 py-0.5 font-mono text-[9px] text-white/80 backdrop-blur-md">
+            Portrait
+          </span>
+        )}
+        {isPanoramic && (
+          <span className="hidden sm:inline-block rounded-md border border-amber-500/30 bg-amber-500/20 px-1.5 py-0.5 font-mono text-[9px] text-amber-300 backdrop-blur-md">
+            Pano
+          </span>
+        )}
+      </div>
+
+      {/* Top Right Favorite Heart */}
+      <button
+        type="button"
+        onClick={(e) => onToggleFavorite(item, e)}
+        className="absolute top-2.5 right-2.5 z-10 grid size-7 cursor-pointer place-items-center rounded-full border border-white/15 bg-black/50 backdrop-blur-md transition hover:scale-110 hover:bg-black/80"
+        title={item.isFavorite ? "Remove favorite" : "Add to favorites"}>
+        <Heart
+          size={13}
+          className={
+            item.isFavorite ?
+              "fill-rose-500 text-rose-500"
+            : "text-foreground/70 hover:text-foreground"
+          }
+        />
+      </button>
+
+      {/* Multi-Select Checkbox */}
+      {isSelectMode && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleSelectItem(item.id);
+          }}
+          className={cn(
+            "absolute bottom-2.5 left-2.5 z-10 grid size-6 cursor-pointer place-items-center rounded-lg transition",
+            isSelected ?
+              "bg-primary border-primary border text-primary-foreground shadow-sm"
+            : "border border-white/20 bg-black/60 text-transparent hover:border-white/50",
+          )}>
+          <Check
+            size={13}
+            strokeWidth={3}
+          />
+        </button>
+      )}
+
+      {/* Responsive Surface: Height adapts 100% to Image Dimensions */}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => {
+          if (isSelectMode) {
+            onToggleSelectItem(item.id);
+            return;
+          }
+          onSelectImage(globalIndex);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            if (isSelectMode) {
+              onToggleSelectItem(item.id);
+            } else {
+              onSelectImage(globalIndex);
+            }
+          }
+        }}
+        aria-pressed={isSelectMode ? isSelected : undefined}
+        className="relative block w-full cursor-pointer overflow-hidden bg-muted/20 text-left focus:outline-none">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={item.displayUrl || item.url}
+          alt={item.title || "Capture"}
+          loading="lazy"
+          decoding="async"
+          onLoad={handleImageLoad}
+          style={{
+            aspectRatio:
+              hasDimensions ?
+                `${effectiveWidth} / ${effectiveHeight}`
+              : undefined,
+          }}
+          className="block h-auto w-full object-cover transition-transform duration-300 will-change-transform group-hover:scale-[1.025]"
+        />
+      </div>
+
+      {/* Hover Title & EXIF Details Overlay */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-3 pt-8 opacity-0 transition duration-200 group-hover:opacity-100">
+        <div className="flex items-center justify-between gap-2">
+          <p className="truncate text-xs font-semibold text-white drop-shadow-sm">
+            {item.title || "Untitled Capture"}
+          </p>
+          {hasDimensions && (
+            <span className="shrink-0 font-mono text-[10px] text-white/70">
+              {effectiveWidth}×{effectiveHeight}
+            </span>
+          )}
+        </div>
+        {item.metadata?.camera && (
+          <p className="truncate text-[10px] text-white/70 mt-0.5">
+            {item.metadata.camera}
+            {item.metadata.shutter ? ` · ${item.metadata.shutter}` : ""}
+            {item.metadata.focalLength ?
+              ` · ${item.metadata.focalLength}`
+            : ""}
+          </p>
+        )}
+      </div>
     </div>
   );
 };
