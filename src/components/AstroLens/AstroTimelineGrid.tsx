@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, Heart, MapPin } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ImageRecord } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import type { GridDensity, TimeFilterMode } from "./AstroTopNav";
@@ -139,13 +139,7 @@ export const AstroTimelineGrid = ({
     return { label: "JPEG", color: "text-foreground/60 border-line-subtle" };
   };
 
-  const getGridClass = () => {
-    if (gridDensity === "compact")
-      return "columns-2 sm:columns-3 md:columns-4 lg:columns-5 xl:columns-6 gap-3 sm:gap-3.5";
-    if (gridDensity === "large")
-      return "columns-1 sm:columns-2 md:columns-2 lg:columns-3 gap-4 sm:gap-5";
-    return "columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-3.5 sm:gap-4";
-  };
+  const columnCount = useResponsiveColumns(gridDensity);
 
   if (images.length === 0) {
     return (
@@ -166,66 +160,178 @@ export const AstroTimelineGrid = ({
 
   return (
     <div className="space-y-10 pb-24">
-      {groups.map((group) => {
-        const groupItemIds = group.images.map((g) => g.item.id);
-        const allGroupSelected = groupItemIds.every((id) =>
-          selectedIds.has(id),
-        );
+      {groups.map((group) => (
+        <AstroTimelineGroupSection
+          key={group.key}
+          group={group}
+          columnCount={columnCount}
+          selectedIds={selectedIds}
+          isSelectMode={isSelectMode}
+          onSelectImage={onSelectImage}
+          onToggleSelectItem={onToggleSelectItem}
+          onToggleFavorite={onToggleFavorite}
+          onSelectGroup={onSelectGroup}
+          getFormatTag={getFormatTag}
+        />
+      ))}
+    </div>
+  );
+};
 
-        return (
+// Responsive column count based on viewport width and grid density
+const useResponsiveColumns = (density: GridDensity) => {
+  const [cols, setCols] = useState(4);
+
+  useEffect(() => {
+    const update = () => {
+      const w = window.innerWidth;
+      if (density === "compact") {
+        if (w < 640) setCols(2);
+        else if (w < 840) setCols(3);
+        else if (w < 1150) setCols(4);
+        else if (w < 1440) setCols(5);
+        else setCols(6);
+      } else if (density === "large") {
+        if (w < 700) setCols(1);
+        else if (w < 1100) setCols(2);
+        else setCols(3);
+      } else {
+        // normal
+        if (w < 640) setCols(1);
+        else if (w < 900) setCols(2);
+        else if (w < 1280) setCols(3);
+        else setCols(4);
+      }
+    };
+
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [density]);
+
+  return cols;
+};
+
+type AstroTimelineGroupSectionProps = {
+  group: ImageGroup;
+  columnCount: number;
+  selectedIds: Set<string>;
+  isSelectMode: boolean;
+  onSelectImage: (index: number) => void;
+  onToggleSelectItem: (id: string) => void;
+  onToggleFavorite: (image: ImageRecord, e: React.MouseEvent) => void;
+  onSelectGroup: (ids: string[]) => void;
+  getFormatTag: (img: ImageRecord) => { label: string; color: string };
+};
+
+const AstroTimelineGroupSection = ({
+  group,
+  columnCount,
+  selectedIds,
+  isSelectMode,
+  onSelectImage,
+  onToggleSelectItem,
+  onToggleFavorite,
+  onSelectGroup,
+  getFormatTag,
+}: AstroTimelineGroupSectionProps) => {
+  const groupItemIds = group.images.map((g) => g.item.id);
+  const allGroupSelected = groupItemIds.every((id) => selectedIds.has(id));
+
+  // Partition images row-first across columns so items appear strictly side-by-side (pasha pashi)
+  const columnsData = useMemo(() => {
+    const actualCols = Math.min(columnCount, Math.max(1, group.images.length));
+    const columns: Array<Array<{ item: ImageRecord; globalIndex: number }>> =
+      Array.from({ length: actualCols }, () => []);
+
+    const colHeights = new Array(actualCols).fill(0);
+
+    group.images.forEach((entry, idx) => {
+      let targetCol: number;
+
+      // Row-first distribution for the first row guarantees side-by-side ordering
+      if (idx < actualCols) {
+        targetCol = idx;
+      } else {
+        // Waterfall: place into shortest column for balanced masonry
+        let minCol = 0;
+        let minHeight = colHeights[0];
+        for (let c = 1; c < actualCols; c++) {
+          if (colHeights[c] < minHeight) {
+            minHeight = colHeights[c];
+            minCol = c;
+          }
+        }
+        targetCol = minCol;
+      }
+
+      columns[targetCol].push(entry);
+
+      const aspect =
+        entry.item.width > 0 && entry.item.height > 0 ?
+          entry.item.width / entry.item.height
+        : 1.25;
+      colHeights[targetCol] += 1 / aspect;
+    });
+
+    return columns;
+  }, [group.images, columnCount]);
+
+  return (
+    <div className="space-y-3.5">
+      {/* Group Header Row */}
+      <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <h2 className="text-sm font-semibold tracking-wide text-foreground">
+            {group.title}
+          </h2>
+          {group.location && (
+            <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
+              <MapPin
+                size={11}
+                className="text-muted-foreground/60"
+              />
+              {group.location}
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3 text-xs">
+          <span className="text-muted-foreground">
+            {group.images.length}{" "}
+            {group.images.length === 1 ? "capture" : "captures"}
+          </span>
+          <button
+            type="button"
+            onClick={() => onSelectGroup(groupItemIds)}
+            className="cursor-pointer font-medium text-muted-foreground transition hover:text-foreground">
+            {allGroupSelected ? "Deselect all" : "Select all"}
+          </button>
+        </div>
+      </div>
+
+      {/* Side-by-Side (Pasha Pashi) Multi-Column Masonry Flow */}
+      <div className="flex w-full items-start gap-3.5 sm:gap-4">
+        {columnsData.map((colItems, colIdx) => (
           <div
-            key={group.key}
-            className="space-y-3.5">
-            {/* Group Header Row */}
-            <div className="flex items-center justify-between">
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <h2 className="text-sm font-semibold tracking-wide text-foreground">
-                  {group.title}
-                </h2>
-                {group.location && (
-                  <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
-                    <MapPin
-                      size={11}
-                      className="text-muted-foreground/60"
-                    />
-                    {group.location}
-                  </span>
-                )}
-              </div>
-
-              <div className="flex items-center gap-3 text-xs">
-                <span className="text-muted-foreground">
-                  {group.images.length}{" "}
-                  {group.images.length === 1 ? "capture" : "captures"}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => onSelectGroup(groupItemIds)}
-                  className="cursor-pointer font-medium text-muted-foreground transition hover:text-foreground">
-                  {allGroupSelected ? "Deselect all" : "Select all"}
-                </button>
-              </div>
-            </div>
-
-            {/* Photos Auto-Adjusting Pinterest-style Masonry Flow */}
-            <div className={cn("w-full", getGridClass())}>
-              {group.images.map(({ item, globalIndex }) => (
-                <AstroPhotoCard
-                  key={item.id}
-                  item={item}
-                  globalIndex={globalIndex}
-                  isSelected={selectedIds.has(item.id)}
-                  isSelectMode={isSelectMode}
-                  onSelectImage={onSelectImage}
-                  onToggleSelectItem={onToggleSelectItem}
-                  onToggleFavorite={onToggleFavorite}
-                  tag={getFormatTag(item)}
-                />
-              ))}
-            </div>
+            key={colIdx}
+            className="flex flex-1 flex-col gap-3.5 sm:gap-4 min-w-0">
+            {colItems.map(({ item, globalIndex }) => (
+              <AstroPhotoCard
+                key={item.id}
+                item={item}
+                globalIndex={globalIndex}
+                isSelected={selectedIds.has(item.id)}
+                isSelectMode={isSelectMode}
+                onSelectImage={onSelectImage}
+                onToggleSelectItem={onToggleSelectItem}
+                onToggleFavorite={onToggleFavorite}
+                tag={getFormatTag(item)}
+              />
+            ))}
           </div>
-        );
-      })}
+        ))}
+      </div>
     </div>
   );
 };
@@ -287,7 +393,7 @@ const AstroPhotoCard = ({
   return (
     <div
       className={cn(
-        "group relative mb-3.5 sm:mb-4 inline-block w-full break-inside-avoid overflow-hidden rounded-2xl border bg-card text-card-foreground transition-all duration-200",
+        "group relative w-full overflow-hidden rounded-2xl border bg-card text-card-foreground transition-all duration-200 shadow-xs",
         isSelected ?
           "border-primary ring-2 ring-primary/50 shadow-md"
         : "border-border hover:border-line-strong hover:shadow-[0_12px_36px_rgba(0,0,0,0.25)] dark:hover:shadow-[0_12px_36px_rgba(0,0,0,0.7)]",

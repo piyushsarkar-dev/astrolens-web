@@ -3,6 +3,7 @@ import Header from "@/components/Header/Header";
 import ThemeProvider from "@/components/Providers/ThemeProvider";
 import { ThemeSync } from "@/components/Providers/ThemeSync";
 import { AuthProvider } from "@/components/Auth/AuthProvider";
+import { SidebarToggleProvider } from "@/components/Providers/SidebarProvider";
 import { BackupProvider, BackupToaster } from "@/components/Backup";
 import { Toaster } from "@/components/shadcnui/sonner";
 import { geistMono, inter, jakarta } from "@/lib/fonts";
@@ -83,12 +84,14 @@ const RootLayout = ({ children }: Readonly<RootLayoutProps>) => {
           <AuthProvider>
             <ThemeSync />
             <BackupProvider>
-              <Header />
+              <SidebarToggleProvider>
+                <Header />
 
-              {children}
+                {children}
 
-              <Toaster />
-              <BackupToaster />
+                <Toaster />
+                <BackupToaster />
+              </SidebarToggleProvider>
             </BackupProvider>
           </AuthProvider>
         </ThemeProvider>

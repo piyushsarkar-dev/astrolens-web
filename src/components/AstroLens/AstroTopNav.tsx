@@ -7,12 +7,14 @@ import {
   Grid3X3,
   LayoutGrid,
   Loader2,
+  PanelLeft,
   Play,
   Search,
   SlidersHorizontal,
   X,
 } from "lucide-react";
 import { useEffect, useRef } from "react";
+import { useSidebarToggle } from "../Providers/SidebarProvider";
 
 export type TimeFilterMode = "Years" | "Months" | "Days" | "All Photos";
 export type GridDensity = "compact" | "normal" | "large";
@@ -56,6 +58,7 @@ export const AstroTopNav = ({
   isLoading = false,
 }: AstroTopNavProps) => {
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const { isOpen, toggleSidebar } = useSidebarToggle();
 
   // Ctrl+K / Cmd+K focus shortcut
   useEffect(() => {
@@ -84,9 +87,24 @@ export const AstroTopNav = ({
     // Gallery toolbar — search, filters, grid and slideshow controls. It lives
     // in the content flow now that the app header owns navigation.
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line-subtle bg-vault-low px-3.5 py-2.5">
-      {/* Search Bar with Ctrl+K + live result count */}
-      <div className="flex items-center gap-3">
-        <div className="relative w-64 md:w-72">
+      {/* Sidebar Toggle + Search Bar with Ctrl+K + live result count */}
+      <div className="flex items-center gap-2.5">
+        <button
+          type="button"
+          onClick={toggleSidebar}
+          className={`grid size-8.5 place-items-center rounded-xl border transition cursor-pointer ${
+            isOpen ?
+              "border-line-subtle bg-foreground/[0.04] text-foreground/75 hover:bg-foreground/[0.09] hover:text-foreground"
+            : "border-primary/40 bg-primary/15 text-primary shadow-sm hover:bg-primary/25"
+          }`}
+          title={
+            isOpen ? "Collapse sidebar (Ctrl+B)" : "Expand sidebar (Ctrl+B)"
+          }
+          aria-label={isOpen ? "Collapse sidebar" : "Expand sidebar"}>
+          <PanelLeft size={16} />
+        </button>
+
+        <div className="relative w-60 sm:w-64 md:w-72">
           <Search
             size={15}
             className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-foreground/40"

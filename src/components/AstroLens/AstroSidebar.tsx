@@ -10,6 +10,7 @@ import {
   KeyRound,
   Lock,
   MoonStar,
+  PanelLeftClose,
   Plus,
   Power,
   Settings,
@@ -23,6 +24,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/components/Auth/AuthProvider";
 import UserAvatar from "@/components/Auth/UserAvatar";
 import { useBackup } from "@/components/Backup";
+import { useSidebarToggle } from "@/components/Providers/SidebarProvider";
 import { useTheme } from "@/components/Providers/ThemeProvider";
 import { Badge } from "@/components/shadcnui/badge";
 import { Button } from "@/components/shadcnui/button";
@@ -77,6 +79,7 @@ export const AstroSidebar = ({
   const { user, profile, avatarUrl, avatarConfig, signOut } = useAuth();
   const { openUploadPicker, isBackingUp } = useBackup();
   const { theme, setTheme } = useTheme();
+  const { isOpen, toggleSidebar, setIsOpen } = useSidebarToggle();
   const router = useRouter();
   const [isCreatingAlbum, setIsCreatingAlbum] = useState(false);
   const [newAlbumName, setNewAlbumName] = useState("");
@@ -116,17 +119,47 @@ export const AstroSidebar = ({
   };
 
   return (
-    <TooltipProvider delay={200}>
-      <aside className="z-30 flex h-full w-72 shrink-0 flex-col justify-between border-r border-border bg-sidebar text-sidebar-foreground select-none">
-        {/* Top Scrollable Content */}
-        <div className="flex-1 scrollbar-thin scrollbar-thumb-white/10 space-y-6 overflow-x-hidden overflow-y-auto p-4">
-          {/* Upload Photos Gradient Button */}
-          <button
-            type="button"
-            onClick={openUploadPicker}
-            disabled={isBackingUp}
-            className="flex w-full cursor-pointer items-center justify-between rounded-2xl border border-primary/20 bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 px-3.5 py-2.5 font-semibold text-white shadow-lg shadow-sky-950/20 transition hover:brightness-110 active:scale-[0.98] disabled:opacity-50"
-          >
+    <>
+      {/* Mobile Backdrop Overlay when sidebar is open on small screens */}
+      {isOpen && (
+        <div
+          onClick={() => setIsOpen(false)}
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs transition-opacity lg:hidden"
+          aria-label="Close sidebar backdrop"
+        />
+      )}
+
+      <TooltipProvider delay={200}>
+        <aside
+          className={cn(
+            "fixed inset-y-0 left-0 z-50 pt-16 lg:static lg:z-30 flex h-full shrink-0 flex-col justify-between border-r border-border bg-sidebar text-sidebar-foreground select-none transition-[width,transform,opacity] duration-300 ease-in-out",
+            isOpen ?
+              "w-72 translate-x-0 opacity-100"
+            : "w-0 -translate-x-full lg:translate-x-0 lg:w-0 overflow-hidden border-r-0 opacity-0 pointer-events-none",
+          )}>
+          {/* Top Scrollable Content */}
+          <div className="flex-1 scrollbar-thin scrollbar-thumb-white/10 space-y-6 overflow-x-hidden overflow-y-auto p-4 w-72">
+            {/* Header row with collapse button */}
+            <div className="flex items-center justify-between gap-2 pb-1">
+              <span className="text-xs font-semibold tracking-wide text-foreground/80">
+                Navigation
+              </span>
+              <button
+                type="button"
+                onClick={toggleSidebar}
+                className="grid size-7 cursor-pointer place-items-center rounded-lg border border-border/60 bg-muted/40 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                title="Collapse sidebar (Ctrl+B)">
+                <PanelLeftClose size={14} />
+              </button>
+            </div>
+
+            {/* Upload Photos Gradient Button */}
+            <button
+              type="button"
+              onClick={openUploadPicker}
+              disabled={isBackingUp}
+              className="flex w-full cursor-pointer items-center justify-between rounded-2xl border border-primary/20 bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 px-3.5 py-2.5 font-semibold text-white shadow-lg shadow-sky-950/20 transition hover:brightness-110 active:scale-[0.98] disabled:opacity-50"
+            >
             <div className="flex items-center gap-2">
               <Upload size={16} />
               <span className="text-sm tracking-wide">Upload Photos</span>
@@ -488,6 +521,7 @@ export const AstroSidebar = ({
         </div>
       </aside>
     </TooltipProvider>
-  );
+  </>
+);
 };
 export default AstroSidebar;

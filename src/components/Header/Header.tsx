@@ -1,16 +1,18 @@
 "use client";
 
-import { Heart, UploadCloud } from "lucide-react";
+import { Heart, PanelLeft, UploadCloud } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import ThemeToggleButton from "../ThemeToggleButton";
 import UserMenu from "../Auth/UserMenu";
 import { useBackup } from "../Backup";
+import { useSidebarToggle } from "../Providers/SidebarProvider";
 
 const Header = () => {
   const pathname = usePathname();
   const { openUploadPicker, isBackingUp } = useBackup();
+  const { isOpen, toggleSidebar } = useSidebarToggle();
 
   const isPhotosRoute = pathname === "/"; // single app-wide nav — the gallery keeps this header too
 
@@ -19,30 +21,54 @@ const Header = () => {
       className="glass-bar fixed top-0 right-0 left-0 z-40 border-x-0 border-t-0"
       aria-label="app-header">
       <div className="mx-auto flex h-16 w-full max-w-[1440px] items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Link
-          href={"/"}
-          className="flex items-center gap-3">
-          <Image
-            src="/logo.png"
-            alt="Astro Lens logo"
-            width={36}
-            height={36}
-            priority
-            className="shrink-0 rounded-full object-cover ring-1 ring-line-subtle"
-          />
+        <div className="flex items-center gap-2.5">
+          {/* Left Sidebar Toggle Button */}
+          {isPhotosRoute && (
+            <button
+              type="button"
+              onClick={toggleSidebar}
+              className={`grid size-9 place-items-center rounded-xl border transition cursor-pointer ${
+                isOpen ?
+                  "border-line-subtle bg-foreground/[0.04] text-foreground/75 hover:bg-foreground/[0.09] hover:text-foreground"
+                : "border-primary/40 bg-primary/15 text-primary shadow-sm hover:bg-primary/25"
+              }`}
+              title={
+                isOpen ?
+                  "Collapse left sidebar (Ctrl+B)"
+                : "Expand left sidebar (Ctrl+B)"
+              }
+              aria-label={
+                isOpen ? "Collapse left sidebar" : "Expand left sidebar"
+              }>
+              <PanelLeft size={18} />
+            </button>
+          )}
 
-          <span className="leading-none">
-            <h1
-              className="font-display text-[17px] font-semibold"
-              aria-label="App Name">
-              Astro Lens
-            </h1>
+          <Link
+            href={"/"}
+            className="flex items-center gap-3">
+            <Image
+              src="/logo.png"
+              alt="Astro Lens logo"
+              width={36}
+              height={36}
+              priority
+              className="shrink-0 rounded-full object-cover ring-1 ring-line-subtle"
+            />
 
-            <span className="text-muted-foreground mt-1 block text-[11px] font-medium tracking-wide">
-              Private photo vault
+            <span className="leading-none">
+              <h1
+                className="font-display text-[17px] font-semibold"
+                aria-label="App Name">
+                Astro Lens
+              </h1>
+
+              <span className="text-muted-foreground mt-1 block text-[11px] font-medium tracking-wide">
+                Private photo vault
+              </span>
             </span>
-          </span>
-        </Link>
+          </Link>
+        </div>
 
         <nav className="flex items-center gap-2">
           <Link
