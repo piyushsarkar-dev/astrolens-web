@@ -24,6 +24,10 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
   const { user, loading: authLoading, hasImgbbKey } = useAuth();
   const userId = user?.id ?? null;
   const [allImages, setAllImages] = useState<ImageRecord[]>(initialImages);
+  // True from the start when the server already told us the user has images,
+  // otherwise flips to true once the client-side fetch settles — this prevents
+  // the upload card from flashing before real data arrives.
+  const [imagesLoaded, setImagesLoaded] = useState(initialImages.length > 0);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [currentView, setCurrentView] = useState<SidebarView>({ type: "all" });
   const [createdAlbums, setCreatedAlbums] = useState<string[]>([]);
@@ -63,9 +67,14 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
     fetch("/api/images", { cache: "no-store" })
       .then((res) => res.json())
       .then((json: { data?: ImageRecord[] } | null) => {
-        if (!cancelled) setAllImages(json?.data ?? []);
+        if (!cancelled) {
+          setAllImages(json?.data ?? []);
+          setImagesLoaded(true);
+        }
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!cancelled) setImagesLoaded(true);
+      });
     return () => {
       cancelled = true;
     };
@@ -295,8 +304,9 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
           </div>
         )}
 
-        {/* Centered drag-and-drop card ONLY when user has 0 photos in account */}
-        {currentView.type === "all" && visibleImages.length === 0 && (
+        {/* Centered drag-and-drop card ONLY when user has 0 photos in account.
+            imagesLoaded prevents it flashing before the fetch completes. */}
+        {currentView.type === "all" && !authLoading && imagesLoaded && visibleImages.length === 0 && (
           <UploadSection
             onUploaded={handleUploaded}
             onError={handleError}
