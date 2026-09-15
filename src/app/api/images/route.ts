@@ -3,6 +3,7 @@ import {
   addImage,
   IMGBB_KEY_MISSING_ERROR,
   IMGBB_LOGIN_REQUIRED_ERROR,
+  normalizeImgbbImage,
   readImages,
   sortImagesNewestFirst,
   uploadImageToImgbb,
@@ -53,7 +54,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: IMGBB_LOGIN_REQUIRED_ERROR }, { status: 401 });
     }
 
-    // 2) Each user uploads with their OWN ImgBB key saved in their profile.
+    // Direct registration: Client already uploaded directly to ImgBB and posts the result
+    const contentType = request.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      const body = (await request.json().catch(() => null)) as {
+        registeredImage?: Parameters<typeof normalizeImgbbImage>[0];
+      } | null;
+
+      if (body?.registeredImage) {
+        const image = normalizeImgbbImage(body.registeredImage);
+        await addImage(image, user.id);
+        return NextResponse.json(
+          { data: [{ ...image, ownerId: user.id }] },
+          { status: 201 },
+        );
+      }
+      return NextResponse.json(
+        { error: "Invalid registration payload." },
+        { status: 400 },
+      );
+    }
+
+    // 2) Fallback proxy upload: Each user uploads with their OWN ImgBB key saved in their profile.
     const { data: profile } = await supabase
       .from("profiles")
       .select("imgbb_api_key")

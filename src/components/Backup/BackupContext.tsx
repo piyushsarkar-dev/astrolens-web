@@ -228,6 +228,17 @@ export const BackupProvider = ({ children }: { children: React.ReactNode }) => {
 
       const overallStartTime = Date.now();
 
+      let uploadKey: string | null = null;
+      try {
+        const keyRes = await fetch("/api/images/key");
+        if (keyRes.ok) {
+          const keyJson = (await keyRes.json()) as { key?: string | null };
+          uploadKey = keyJson?.key?.trim() || null;
+        }
+      } catch {
+        uploadKey = null;
+      }
+
       for (let i = startIndex; i < totalItems; i++) {
         if (stopRequestedRef.current) break;
 
@@ -241,12 +252,6 @@ export const BackupProvider = ({ children }: { children: React.ReactNode }) => {
               : item,
           ),
         );
-
-        let currentDisplay = 0;
-        let targetPct = 3; // Initial small start
-        let isCloudSyncing = false;
-        let isItemDone = false;
-        let tickerInterval: NodeJS.Timeout | null = null;
 
         if (currentItem.size > 32 * 1024 * 1024) {
           accumulatedBytesCompleted += currentItem.size;
@@ -274,141 +279,145 @@ export const BackupProvider = ({ children }: { children: React.ReactNode }) => {
               const filename =
                 currentItem.name ||
                 (currentItem.file instanceof File ? currentItem.file.name : "image.jpg");
-              formData.append("file", currentItem.file, filename);
 
               currentAbortRef.current = () => {
                 xhr.abort();
               };
 
-              // Fluid high-frequency continuous ticker (runs every 25ms = 40 updates/sec)
-              // This guarantees the counter counts: 1, 2, 3, 4, 5... and NEVER jumps directly 60% or 80%!
-              tickerInterval = setInterval(() => {
-                if (stopRequestedRef.current) {
-                  if (tickerInterval) clearInterval(tickerInterval);
-                  return;
+              const itemStartTime = Date.now();
+              const useDirectUpload = Boolean(uploadKey);
+              const targetUrl = useDirectUpload
+                ? `https://api.imgbb.com/1/upload?key=${encodeURIComponent(uploadKey!)}`
+                : "/api/images";
+
+              if (useDirectUpload) {
+                formData.append("image", currentItem.file, filename);
+                if (currentItem.name) {
+                  formData.append("name", currentItem.name.replace(/\.[^.]+$/, ""));
                 }
+              } else {
+                formData.append("file", currentItem.file, filename);
+              }
 
-                if (currentDisplay < targetPct) {
-                  const diff = targetPct - currentDisplay;
-                  // Smoothly increment by 1 or 2 without jumping
-                  const step = diff > 30 ? 2 : 1;
-                  currentDisplay = Math.min(targetPct, currentDisplay + step);
-                } else if (!isItemDone && isCloudSyncing && currentDisplay < 96) {
-                  // While ImgBB is syncing in cloud, smoothly cruise 85% -> 96%
-                  currentDisplay += 1;
-                }
-
-                const currentBytes = Math.round((currentItem.size * currentDisplay) / 100);
-                const totalLoadedSoFar = accumulatedBytesCompleted + currentBytes;
-                const overallPct = Math.min(
-                  isItemDone ? 100 : 98,
-                  Math.round((totalLoadedSoFar / Math.max(1, totalBytes)) * 100),
-                );
-
-                // Speed & ETA calculations
-                const elapsedSec = Math.max(0.1, (Date.now() - overallStartTime) / 1000);
-                const rollingSpeed = totalLoadedSoFar / elapsedSec;
-                if (rollingSpeed > 50) {
-                  setSpeedText(formatSpeed(rollingSpeed));
-                  const remainingBytes = Math.max(0, totalBytes - totalLoadedSoFar);
-                  const secRemaining = Math.ceil(remainingBytes / rollingSpeed);
-                  if (secRemaining <= 3) setEstimatedTimeText("a few seconds");
-                  else if (secRemaining < 60) setEstimatedTimeText(`${secRemaining} seconds`);
-                  else {
-                    const min = Math.ceil(secRemaining / 60);
-                    setEstimatedTimeText(`${min} minute${min > 1 ? "s" : ""}`);
-                  }
-                }
-
-                setDataTransferText(
-                  `${formatBytes(totalLoadedSoFar)} of ${formatBytes(totalBytes)}`,
-                );
-                setOverallProgress(overallPct);
-
-                setQueue((prev) =>
-                  prev.map((item, idx) =>
-                    idx === i
-                      ? {
-                          ...item,
-                          loadedBytes: currentBytes,
-                          progress: currentDisplay,
-                          status: isItemDone
-                            ? "success"
-                            : isCloudSyncing
-                              ? "syncing"
-                              : "uploading",
-                        }
-                      : item,
-                  ),
-                );
-              }, 25);
-
+              // Real-time network progress based directly on physical socket bytes transferred
               xhr.upload.onprogress = (event) => {
-                if (event.lengthComputable) {
-                  const ratio = event.loaded / Math.max(1, event.total);
-                  // Map client-to-server byte transfer to 0% -> 85%
-                  targetPct = Math.min(85, Math.max(targetPct, Math.round(ratio * 85)));
+                if (event.lengthComputable && event.total > 0) {
+                  const loaded = event.loaded;
+                  const total = event.total;
+                  const now = Date.now();
 
-                  if (event.loaded >= event.total) {
-                    isCloudSyncing = true;
-                    setIsSyncingCloud(true);
-                    targetPct = Math.max(targetPct, 88);
+                  // True percentage (0 - 100%)
+                  const itemPct = Math.min(100, Math.floor((loaded / total) * 100));
+
+                  // Real-time mobile / network speed
+                  const elapsedSec = Math.max(0.1, (now - itemStartTime) / 1000);
+                  const rollingSpeed = loaded / elapsedSec;
+
+                  if (rollingSpeed > 50) {
+                    setSpeedText(formatSpeed(rollingSpeed));
+                    const remainingBytes = Math.max(0, total - loaded);
+                    const secRemaining = Math.ceil(remainingBytes / rollingSpeed);
+                    if (secRemaining <= 3) setEstimatedTimeText("a few seconds");
+                    else if (secRemaining < 60) setEstimatedTimeText(`${secRemaining} seconds`);
+                    else {
+                      const min = Math.ceil(secRemaining / 60);
+                      setEstimatedTimeText(`${min} minute${min > 1 ? "s" : ""}`);
+                    }
                   }
+
+                  const totalLoadedSoFar = accumulatedBytesCompleted + loaded;
+                  const overallPct = Math.min(
+                    100,
+                    Math.floor((totalLoadedSoFar / Math.max(1, totalBytes)) * 100),
+                  );
+
+                  setDataTransferText(
+                    `${formatBytes(totalLoadedSoFar)} of ${formatBytes(totalBytes)}`,
+                  );
+                  setOverallProgress(overallPct);
+
+                  const isCloudProcessing = loaded >= total;
+                  if (isCloudProcessing) {
+                    setIsSyncingCloud(true);
+                  }
+
+                  setQueue((prev) =>
+                    prev.map((item, idx) =>
+                      idx === i
+                        ? {
+                            ...item,
+                            loadedBytes: loaded,
+                            progress: itemPct,
+                            status: isCloudProcessing ? "syncing" : "uploading",
+                          }
+                        : item,
+                    ),
+                  );
                 }
               };
 
-              xhr.onload = () => {
+              xhr.onload = async () => {
                 currentAbortRef.current = null;
                 setIsSyncingCloud(false);
-                isCloudSyncing = false;
 
                 try {
-                  const json = JSON.parse(xhr.responseText) as {
-                    data?: ImageRecord[];
-                    error?: string;
-                  };
-                  if (xhr.status >= 200 && xhr.status < 300 && json?.data?.[0]) {
-                    const record = json.data[0];
-                    isItemDone = true;
-                    targetPct = 100;
+                  const raw = xhr.responseText;
+                  const json = JSON.parse(raw);
 
-                    // Let display smoothly glide to 100% before finishing
-                    const checkInterval = setInterval(() => {
-                      if (currentDisplay >= 100) {
-                        clearInterval(checkInterval);
-                        if (tickerInterval) clearInterval(tickerInterval);
-                        resolve(record);
+                  if (xhr.status >= 200 && xhr.status < 300) {
+                    if (useDirectUpload && json?.data?.url) {
+                      // Direct ImgBB upload succeeded! Register in app database
+                      const regRes = await fetch("/api/images", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ registeredImage: json.data }),
+                      });
+                      const regJson = await regRes.json();
+                      if (regRes.ok && regJson?.data?.[0]) {
+                        resolve(regJson.data[0]);
+                        return;
                       }
-                    }, 20);
-                  } else {
-                    if (tickerInterval) clearInterval(tickerInterval);
-                    reject(
-                      new Error(
-                        json?.error || `Upload failed (HTTP ${xhr.status}).`,
-                      ),
-                    );
+                      reject(
+                        new Error(
+                          regJson?.error || "Failed to register uploaded photo.",
+                        ),
+                      );
+                      return;
+                    }
+
+                    if (json?.data?.[0]) {
+                      resolve(json.data[0]);
+                      return;
+                    }
                   }
+
+                  const message =
+                    typeof json?.error === "string"
+                      ? json.error
+                      : json?.error?.message;
+                  reject(
+                    new Error(
+                      message || `Upload failed (HTTP ${xhr.status}).`,
+                    ),
+                  );
                 } catch {
-                  if (tickerInterval) clearInterval(tickerInterval);
                   reject(new Error(`Upload failed (HTTP ${xhr.status}).`));
                 }
               };
 
               xhr.onerror = () => {
-                if (tickerInterval) clearInterval(tickerInterval);
                 currentAbortRef.current = null;
                 setIsSyncingCloud(false);
                 reject(new Error("Network connection error."));
               };
 
               xhr.onabort = () => {
-                if (tickerInterval) clearInterval(tickerInterval);
                 currentAbortRef.current = null;
                 setIsSyncingCloud(false);
                 reject(new Error("Upload stopped."));
               };
 
-              xhr.open("POST", "/api/images");
+              xhr.open("POST", targetUrl);
               xhr.send(formData);
             },
           );
@@ -448,7 +457,6 @@ export const BackupProvider = ({ children }: { children: React.ReactNode }) => {
             }
           }
         } catch (err) {
-          if (tickerInterval) clearInterval(tickerInterval);
           if (stopRequestedRef.current) break;
           const errMsg =
             err instanceof Error ? err.message : "Failed to upload.";
