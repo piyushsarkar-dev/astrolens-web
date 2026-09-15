@@ -81,13 +81,15 @@ export const AstroTopNav = ({
     isLoading || (searchQuery.trim().length > 0 && resultCount !== undefined);
 
   return (
-    <div className="sticky top-0 z-20 flex h-16 shrink-0 items-center justify-between gap-4 border-b border-white/[0.06] bg-[#0c0d10]/95 px-6 backdrop-blur-md">
+    // Gallery toolbar — search, filters, grid and slideshow controls. It lives
+    // in the content flow now that the app header owns navigation.
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line-subtle bg-vault-low px-3.5 py-2.5">
       {/* Search Bar with Ctrl+K + live result count */}
       <div className="flex items-center gap-3">
         <div className="relative w-64 md:w-72">
           <Search
             size={15}
-            className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-white/40"
+            className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-foreground/40"
           />
           <input
             ref={searchInputRef}
@@ -95,24 +97,24 @@ export const AstroTopNav = ({
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search"
-            className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] py-1.5 pr-14 pl-9 text-xs text-white transition outline-none placeholder:text-white/35 hover:border-white/15 focus:border-emerald-500/50"
+            className="w-full rounded-xl border border-line-subtle bg-foreground/[0.03] py-1.5 pr-14 pl-9 text-xs text-foreground transition outline-none placeholder:text-foreground/35 hover:border-line-strong focus:border-emerald-500/50"
           />
           {searchQuery ?
             <button
               type="button"
               onClick={() => onSearchChange("")}
-              className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-white/40 hover:text-white"
+              className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-foreground/40 hover:text-foreground"
               title="Clear search">
               <X size={13} />
             </button>
-          : <kbd className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 rounded border border-white/10 bg-white/[0.05] px-1.5 py-0.5 font-mono text-[10px] text-white/40">
+          : <kbd className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 rounded border border-line-subtle bg-foreground/[0.05] px-1.5 py-0.5 font-mono text-[10px] text-foreground/40">
               Ctrl+K
             </kbd>
           }
         </div>
 
         {showStatus && (
-          <span className="hidden items-center gap-1.5 font-mono text-[11px] text-white/40 xl:flex">
+          <span className="hidden items-center gap-1.5 font-mono text-[11px] text-foreground/40 xl:flex">
             {isLoading ?
               <>
                 <Loader2
@@ -122,7 +124,7 @@ export const AstroTopNav = ({
                 <span>Loading vault…</span>
               </>
             : <>
-                <span className="text-white/70">
+                <span className="text-foreground/70">
                   {(resultCount ?? 0).toLocaleString()}
                 </span>
                 <span>matches</span>
@@ -133,7 +135,7 @@ export const AstroTopNav = ({
       </div>
 
       {/* Time Segmented Pills */}
-      <div className="hidden items-center rounded-xl border border-white/[0.08] bg-white/[0.03] p-1 text-xs font-medium sm:flex">
+      <div className="hidden items-center rounded-xl border border-line-subtle bg-foreground/[0.03] p-1 text-xs font-medium sm:flex">
         {timeOptions.map((opt) => {
           const isActive = timeFilter === opt;
           return (
@@ -143,8 +145,8 @@ export const AstroTopNav = ({
               onClick={() => onTimeFilterChange(opt)}
               className={`cursor-pointer rounded-lg px-3 py-1 transition ${
                 isActive ?
-                  "border border-white/15 bg-[#181a20] font-semibold text-white shadow-sm"
-                : "text-white/50 hover:text-white"
+                  "border border-line-strong bg-vault-high font-semibold text-foreground shadow-sm"
+                : "text-foreground/50 hover:text-foreground"
               }`}>
               {opt}
             </button>
@@ -155,14 +157,14 @@ export const AstroTopNav = ({
       {/* Right Controls */}
       <div className="flex items-center gap-2">
         {/* Density Layout Icons */}
-        <div className="hidden items-center rounded-xl border border-white/[0.08] bg-white/[0.03] p-1 lg:flex">
+        <div className="hidden items-center rounded-xl border border-line-subtle bg-foreground/[0.03] p-1 lg:flex">
           <button
             type="button"
             onClick={() => onGridDensityChange("compact")}
             className={`cursor-pointer rounded-lg p-1.5 transition ${
               gridDensity === "compact" ?
-                "bg-white/10 text-white"
-              : "text-white/40 hover:text-white"
+                "bg-foreground/10 text-foreground"
+              : "text-foreground/40 hover:text-foreground"
             }`}
             title="Compact 4-column grid">
             <LayoutGrid size={14} />
@@ -172,8 +174,8 @@ export const AstroTopNav = ({
             onClick={() => onGridDensityChange("normal")}
             className={`cursor-pointer rounded-lg p-1.5 transition ${
               gridDensity === "normal" ?
-                "bg-white/10 text-white"
-              : "text-white/40 hover:text-white"
+                "bg-foreground/10 text-foreground"
+              : "text-foreground/40 hover:text-foreground"
             }`}
             title="Standard 3-column grid">
             <Grid3X3 size={14} />
@@ -183,8 +185,8 @@ export const AstroTopNav = ({
             onClick={() => onGridDensityChange("large")}
             className={`cursor-pointer rounded-lg p-1.5 transition ${
               gridDensity === "large" ?
-                "bg-white/10 text-white"
-              : "text-white/40 hover:text-white"
+                "bg-foreground/10 text-foreground"
+              : "text-foreground/40 hover:text-foreground"
             }`}
             title="Wide 2-column grid">
             <Grid2X2 size={14} />
@@ -198,7 +200,7 @@ export const AstroTopNav = ({
           className={`flex cursor-pointer items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium transition ${
             isExifFilterOpen ?
               "border-emerald-500/30 bg-emerald-500/15 font-semibold text-emerald-300"
-            : "border-white/[0.08] bg-white/[0.03] text-white/70 hover:bg-white/[0.06] hover:text-white"
+            : "border-line-subtle bg-foreground/[0.03] text-foreground/70 hover:bg-foreground/[0.06] hover:text-foreground"
           }`}>
           <SlidersHorizontal size={13} />
           <span className="hidden md:inline">EXIF Filter</span>
@@ -213,7 +215,7 @@ export const AstroTopNav = ({
               "Sorted by newest first, click for oldest first"
             : "Sorted by oldest first, click for newest first"
           }
-          className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs font-medium text-white/70 transition hover:bg-white/[0.06] hover:text-white">
+          className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-line-subtle bg-foreground/[0.03] px-3 py-1.5 text-xs font-medium text-foreground/70 transition hover:bg-foreground/[0.06] hover:text-foreground">
           <ArrowUpDown
             size={13}
             className={`transition-transform duration-200 ${
@@ -221,7 +223,7 @@ export const AstroTopNav = ({
             }`}
           />
           <span className="hidden md:inline">Date Captured</span>
-          <span className="hidden text-white/40 lg:inline">
+          <span className="hidden text-foreground/40 lg:inline">
             {sortOrder === "desc" ? "Newest" : "Oldest"}
           </span>
         </button>
@@ -233,7 +235,7 @@ export const AstroTopNav = ({
           className={`flex cursor-pointer items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium transition ${
             isSelectMode ?
               "bg-sky border-sky font-semibold text-white"
-            : "border-white/[0.08] bg-white/[0.03] text-white/70 hover:bg-white/[0.06] hover:text-white"
+            : "border-line-subtle bg-foreground/[0.03] text-foreground/70 hover:bg-foreground/[0.06] hover:text-foreground"
           }`}>
           <CheckSquare size={13} />
           <span>Select</span>
@@ -243,7 +245,7 @@ export const AstroTopNav = ({
         <button
           type="button"
           onClick={onStartSlideshow}
-          className="grid size-8 cursor-pointer place-items-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-white/70 transition hover:bg-white/[0.08] hover:text-white"
+          className="grid size-8 cursor-pointer place-items-center rounded-xl border border-line-subtle bg-foreground/[0.03] text-foreground/70 transition hover:bg-foreground/[0.08] hover:text-foreground"
           title="Play fullscreen slideshow">
           <Play size={13} />
         </button>

@@ -111,7 +111,7 @@ export const AstroTimelineGrid = ({
         color: "text-emerald-400 border-emerald-500/30",
       };
     if (img.mime?.includes("cr3"))
-      return { label: "CR3", color: "text-white/80 border-white/15" };
+      return { label: "CR3", color: "text-foreground/80 border-line-strong" };
     if (
       img.mime?.includes("tiff") &&
       img.title.toLowerCase().includes("nebula")
@@ -135,7 +135,7 @@ export const AstroTimelineGrid = ({
         label: "RAW 14-bit",
         color: "text-emerald-400 border-emerald-500/30",
       };
-    return { label: "JPEG", color: "text-white/60 border-white/10" };
+    return { label: "JPEG", color: "text-foreground/60 border-line-subtle" };
   };
 
   const getGridClass = () => {
@@ -147,13 +147,13 @@ export const AstroTimelineGrid = ({
 
   if (images.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-2 rounded-3xl border border-dashed border-white/[0.09] py-20 text-center">
-        <p className="text-sm font-medium text-white/60">
+      <div className="flex flex-col items-center gap-2 rounded-3xl border border-dashed border-line-subtle py-20 text-center">
+        <p className="text-sm font-medium text-foreground/60">
           {searchQuery.trim() ?
             `No photos match “${searchQuery.trim()}”`
           : "No photos found in this view"}
         </p>
-        <p className="text-xs text-white/35">
+        <p className="text-xs text-foreground/35">
           {searchQuery.trim() ?
             "Try a different keyword, or clear the search to see everything."
           : "Upload a photo or switch to another album to fill this view."}
@@ -177,14 +177,14 @@ export const AstroTimelineGrid = ({
             {/* Group Header Row */}
             <div className="flex items-center justify-between">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <h2 className="text-sm font-semibold tracking-wide text-white">
+                <h2 className="text-sm font-semibold tracking-wide text-foreground">
                   {group.title}
                 </h2>
                 {group.location && (
-                  <span className="flex items-center gap-1 text-xs font-medium text-white/40">
+                  <span className="flex items-center gap-1 text-xs font-medium text-foreground/40">
                     <MapPin
                       size={11}
-                      className="text-white/30"
+                      className="text-foreground/30"
                     />
                     {group.location}
                   </span>
@@ -192,14 +192,14 @@ export const AstroTimelineGrid = ({
               </div>
 
               <div className="flex items-center gap-3 text-xs">
-                <span className="text-white/40">
+                <span className="text-foreground/40">
                   {group.images.length}{" "}
                   {group.images.length === 1 ? "capture" : "captures"}
                 </span>
                 <button
                   type="button"
                   onClick={() => onSelectGroup(groupItemIds)}
-                  className="cursor-pointer font-medium text-white/50 transition hover:text-white">
+                  className="cursor-pointer font-medium text-foreground/50 transition hover:text-foreground">
                   {allGroupSelected ? "Deselect all" : "Select all"}
                 </button>
               </div>
@@ -214,10 +214,10 @@ export const AstroTimelineGrid = ({
                 return (
                   <div
                     key={item.id}
-                    className={`group relative overflow-hidden rounded-2xl border bg-[#121418] transition duration-200 ${
+                    className={`group relative overflow-hidden rounded-2xl border bg-vault-low transition duration-200 ${
                       isSelected ?
                         "border-sky ring-sky/50 ring-2"
-                      : "border-white/[0.07] hover:border-white/20 hover:shadow-[0_12px_36px_rgba(0,0,0,0.6)]"
+                      : "border-line-subtle hover:border-line-strong hover:shadow-[0_12px_36px_rgba(0,0,0,0.6)]"
                     }`}>
                     {/* Top Format Tag Badge */}
                     <div className="pointer-events-none absolute top-2.5 left-2.5 z-10">
@@ -240,7 +240,7 @@ export const AstroTimelineGrid = ({
                         className={
                           item.isFavorite ?
                             "fill-[#ff2a6d] text-[#ff2a6d]"
-                          : "text-white/70 hover:text-white"
+                          : "text-foreground/70 hover:text-foreground"
                         }
                       />
                     </button>
@@ -291,11 +291,11 @@ export const AstroTimelineGrid = ({
 
                     {/* Hover Title Overlay */}
                     <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent p-3 pt-6 opacity-0 transition duration-200 group-hover:opacity-100">
-                      <p className="truncate text-xs font-semibold text-white">
+                      <p className="truncate text-xs font-semibold text-foreground">
                         {item.title || "Untitled Capture"}
                       </p>
                       {item.metadata?.camera && (
-                        <p className="truncate text-[10px] text-white/60">
+                        <p className="truncate text-[10px] text-foreground/60">
                           {item.metadata.camera} · {item.metadata.shutter || ""}
                         </p>
                       )}

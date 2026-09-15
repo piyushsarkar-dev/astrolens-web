@@ -29,7 +29,7 @@ export const AstroBottomStatusBar = ({
   const progressText = `${Math.round(overallProgress)}%`;
 
   return (
-    <footer className="sticky bottom-0 z-20 flex h-9 shrink-0 items-center justify-between border-t border-white/[0.06] bg-[#0c0d10] px-6 font-mono text-[11px] select-none">
+    <footer className="sticky bottom-0 z-20 flex h-9 shrink-0 items-center justify-between border-t border-line-subtle bg-canvas px-6 font-mono text-[11px] select-none">
       {/* Left Verification */}
       <div className="flex items-center gap-2.5">
         {isBackingUp ?
@@ -45,19 +45,19 @@ export const AstroBottomStatusBar = ({
             <span>Vault Locked to Device</span>
           </span>
         }
-        <span className="text-white/20">|</span>
-        <span className="text-white/40">
+        <span className="text-foreground/20">|</span>
+        <span className="text-foreground/40">
           {isBackingUp ? "Checksums pending…" : "SHA-256 Checksums Verified"}
         </span>
       </div>
 
       {/* Right Stats & Sync */}
-      <div className="flex items-center gap-2.5 text-white/40">
+      <div className="flex items-center gap-2.5 text-foreground/40">
         <span>
           {synced.toLocaleString()} / {totalCount.toLocaleString()} items
           cataloged ({formatSize(totalSizeBytes)})
         </span>
-        <span className="text-white/20">•</span>
+        <span className="text-foreground/20">•</span>
         {isBackingUp ?
           <span className="text-sky flex items-center gap-1.5 font-medium">
             <span className="bg-sky size-1.5 animate-pulse rounded-full shadow-[0_0_6px_rgba(30,136,229,0.8)]" />

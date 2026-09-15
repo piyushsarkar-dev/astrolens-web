@@ -4,15 +4,15 @@ import { useAuth } from "@/components/Auth/AuthProvider";
 import UserAvatar from "@/components/Auth/UserAvatar";
 const ProfilePage = () => {
   const { user, profile, avatarUrl, avatarConfig, keyStatus, loading } = useAuth();
-  if (loading) return <p className="text-mist pt-28 text-sm">Loading profile…</p>;
-  if (!user) return <p className="pt-28 text-sm">Please log in to view your profile.</p>;
+  if (loading) return <p className="text-mist px-4 pt-28 text-sm">Loading profile…</p>;
+  if (!user) return <p className="px-4 pt-28 text-sm">Please log in to view your profile.</p>;
   const name =
     profile?.display_name ||
     (user.user_metadata?.display_name as string | undefined) ||
     user.email?.split("@")[0] ||
     "Account";
   return (
-    <section className="mx-auto w-full max-w-md pt-28 pb-16 sm:pt-32">
+    <section className="mx-auto w-full max-w-md px-4 pt-28 pb-24 sm:px-6 sm:pt-32">
       <div className="vault-card rounded-3xl p-6 text-center sm:p-8">
         <UserAvatar seed={user.id} avatarUrl={avatarUrl} avatarConfig={avatarConfig} size={96} className="ring-line-subtle mx-auto ring-2" />
         <h2 className="font-display mt-4 truncate text-2xl font-bold">{name}</h2>

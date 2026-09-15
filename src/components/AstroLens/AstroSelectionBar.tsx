@@ -29,22 +29,22 @@ export const AstroSelectionBar = ({
   const allSelected = totalCount > 0 && selectedCount === totalCount;
 
   return (
-    <div className="border-sky/30 bg-sky/[0.08] animate-in fade-in slide-in-from-top-2 flex flex-wrap items-center justify-between gap-3 rounded-2xl border px-4 py-2.5 text-xs text-white/80">
+    <div className="border-sky/30 bg-sky/[0.08] animate-in fade-in slide-in-from-top-2 flex flex-wrap items-center justify-between gap-3 rounded-2xl border px-4 py-2.5 text-xs text-foreground/80">
       <div className="flex items-center gap-3">
         <span className="text-sky font-semibold">{selectedCount} selected</span>
-        <span className="text-white/25">|</span>
+        <span className="text-foreground/25">|</span>
         <button
           type="button"
           onClick={onSelectAll}
           disabled={allSelected || totalCount === 0}
-          className="font-medium text-white/60 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-40">
+          className="font-medium text-foreground/60 transition hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40">
           Select all {totalCount > 0 ? `(${totalCount})` : ""}
         </button>
         <button
           type="button"
           onClick={onClearSelection}
           disabled={selectedCount === 0}
-          className="font-medium text-white/60 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-40">
+          className="font-medium text-foreground/60 transition hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40">
           Clear
         </button>
       </div>
@@ -54,7 +54,7 @@ export const AstroSelectionBar = ({
           type="button"
           onClick={onFavoriteSelected}
           disabled={isBusy || selectedCount === 0}
-          className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-1.5 font-medium transition hover:bg-white/[0.09] hover:text-white disabled:cursor-not-allowed disabled:opacity-40">
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-line-subtle bg-foreground/[0.04] px-3 py-1.5 font-medium transition hover:bg-foreground/[0.09] hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40">
           {isBusy ?
             <Loader2
               size={13}
@@ -82,12 +82,12 @@ export const AstroSelectionBar = ({
           <span>Delete</span>
         </button>
 
-        <span className="text-white/20">|</span>
+        <span className="text-foreground/20">|</span>
 
         <button
           type="button"
           onClick={onExitSelectMode}
-          className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-1.5 font-medium transition hover:bg-white/[0.09] hover:text-white"
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-line-subtle bg-foreground/[0.04] px-3 py-1.5 font-medium transition hover:bg-foreground/[0.09] hover:text-foreground"
           title="Exit select mode">
           <SquareX size={13} />
           <span>Done</span>
@@ -96,7 +96,7 @@ export const AstroSelectionBar = ({
         <button
           type="button"
           onClick={onExitSelectMode}
-          className="grid size-7 cursor-pointer place-items-center rounded-lg text-white/40 transition hover:bg-white/10 hover:text-white"
+          className="grid size-7 cursor-pointer place-items-center rounded-lg text-foreground/40 transition hover:bg-foreground/10 hover:text-foreground"
           title="Exit select mode">
           <X size={13} />
         </button>

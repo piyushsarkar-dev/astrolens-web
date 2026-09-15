@@ -132,18 +132,18 @@ export const PhotoDetailsDrawer = ({
 
   return (
     <aside
-      className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-[#141517]/95 backdrop-blur-2xl border-l border-white/10 shadow-2xl text-foreground animate-in slide-in-from-right duration-200"
+      className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-vault-low/95 backdrop-blur-2xl border-l border-line-subtle shadow-2xl text-foreground animate-in slide-in-from-right duration-200"
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
       onWheel={(e) => e.stopPropagation()}>
       {/* Drawer Header */}
-      <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
+      <div className="flex items-center justify-between border-b border-line-subtle px-6 py-4">
         <div className="flex items-center gap-2.5">
           <span className="grid size-8 place-items-center rounded-lg bg-sky/15 text-sky">
             <Info size={18} />
           </span>
           <div>
-            <h3 className="font-display text-base font-semibold leading-tight text-white">
+            <h3 className="font-display text-base font-semibold leading-tight text-foreground">
               Photo Details
             </h3>
             <p className="text-mist text-xs">File details & metadata</p>
@@ -153,7 +153,7 @@ export const PhotoDetailsDrawer = ({
         <button
           type="button"
           onClick={onClose}
-          className="grid size-8 place-items-center rounded-full text-white/70 hover:bg-white/10 hover:text-white transition cursor-pointer"
+          className="grid size-8 place-items-center rounded-full text-foreground/70 hover:bg-foreground/10 hover:text-foreground transition cursor-pointer"
           title="Close details">
           <X size={18} />
         </button>
@@ -162,9 +162,9 @@ export const PhotoDetailsDrawer = ({
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6 text-sm">
         {/* Real File Info Card */}
-        <div className="rounded-2xl bg-white/[0.03] border border-white/5 p-4 space-y-3">
+        <div className="rounded-2xl bg-foreground/[0.03] border border-line-subtle p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-white font-medium truncate max-w-[240px]">
+            <span className="text-foreground font-medium truncate max-w-[240px]">
               {image.title || "Untitled Image"}
             </span>
             <span className="rounded bg-sky/20 px-2 py-0.5 text-[10px] font-semibold text-sky uppercase">
@@ -172,7 +172,7 @@ export const PhotoDetailsDrawer = ({
             </span>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 pt-2 text-xs text-mist border-t border-white/5">
+          <div className="grid grid-cols-2 gap-3 pt-2 text-xs text-mist border-t border-line-subtle">
             <div className="flex items-center gap-2">
               <Layers size={14} className="text-sky/80" />
               <span>
@@ -198,19 +198,19 @@ export const PhotoDetailsDrawer = ({
               <span>Camera & EXIF</span>
             </div>
 
-            <div className="rounded-2xl bg-white/[0.03] border border-white/5 p-4 space-y-2.5 text-xs">
+            <div className="rounded-2xl bg-foreground/[0.03] border border-line-subtle p-4 space-y-2.5 text-xs">
               {resolved.exif.camera && (
-                <div className="flex justify-between items-center py-1 border-b border-white/5">
+                <div className="flex justify-between items-center py-1 border-b border-line-subtle">
                   <span className="text-mist">Camera</span>
-                  <span className="text-white font-medium">
+                  <span className="text-foreground font-medium">
                     {resolved.exif.camera}
                   </span>
                 </div>
               )}
               {resolved.exif.lens && (
-                <div className="flex justify-between items-center py-1 border-b border-white/5">
+                <div className="flex justify-between items-center py-1 border-b border-line-subtle">
                   <span className="text-mist">Lens</span>
-                  <span className="text-white font-medium">
+                  <span className="text-foreground font-medium">
                     {resolved.exif.lens}
                   </span>
                 </div>
@@ -218,27 +218,27 @@ export const PhotoDetailsDrawer = ({
               {(resolved.exif.aperture ||
                 resolved.exif.shutter ||
                 resolved.exif.iso) && (
-                <div className="grid grid-cols-3 gap-2 py-1.5 border-b border-white/5 text-center">
+                <div className="grid grid-cols-3 gap-2 py-1.5 border-b border-line-subtle text-center">
                   {resolved.exif.aperture && (
-                    <div className="rounded-xl bg-white/[0.04] p-2">
+                    <div className="rounded-xl bg-foreground/[0.04] p-2">
                       <p className="text-[10px] text-mist">Aperture</p>
-                      <p className="font-semibold text-white mt-0.5">
+                      <p className="font-semibold text-foreground mt-0.5">
                         {resolved.exif.aperture}
                       </p>
                     </div>
                   )}
                   {resolved.exif.shutter && (
-                    <div className="rounded-xl bg-white/[0.04] p-2">
+                    <div className="rounded-xl bg-foreground/[0.04] p-2">
                       <p className="text-[10px] text-mist">Shutter</p>
-                      <p className="font-semibold text-white mt-0.5">
+                      <p className="font-semibold text-foreground mt-0.5">
                         {resolved.exif.shutter}
                       </p>
                     </div>
                   )}
                   {resolved.exif.iso && (
-                    <div className="rounded-xl bg-white/[0.04] p-2">
+                    <div className="rounded-xl bg-foreground/[0.04] p-2">
                       <p className="text-[10px] text-mist">ISO</p>
-                      <p className="font-semibold text-white mt-0.5">
+                      <p className="font-semibold text-foreground mt-0.5">
                         {resolved.exif.iso}
                       </p>
                     </div>
@@ -246,17 +246,17 @@ export const PhotoDetailsDrawer = ({
                 </div>
               )}
               {resolved.exif.focalLength && (
-                <div className="flex justify-between items-center py-1 border-b border-white/5">
+                <div className="flex justify-between items-center py-1 border-b border-line-subtle">
                   <span className="text-mist">Focal Length</span>
-                  <span className="text-white font-medium">
+                  <span className="text-foreground font-medium">
                     {resolved.exif.focalLength}
                   </span>
                 </div>
               )}
               {resolved.exif.colorSpace && (
-                <div className="flex justify-between items-center py-1 border-b border-white/5">
+                <div className="flex justify-between items-center py-1 border-b border-line-subtle">
                   <span className="text-mist">Color Space</span>
-                  <span className="text-white font-medium">
+                  <span className="text-foreground font-medium">
                     {resolved.exif.colorSpace}
                   </span>
                 </div>
@@ -264,7 +264,7 @@ export const PhotoDetailsDrawer = ({
               {resolved.exif.meteringMode && (
                 <div className="flex justify-between items-center py-1">
                   <span className="text-mist">Metering</span>
-                  <span className="text-white font-medium">
+                  <span className="text-foreground font-medium">
                     {resolved.exif.meteringMode}
                   </span>
                 </div>
@@ -293,9 +293,9 @@ export const PhotoDetailsDrawer = ({
               )}
             </div>
 
-            <div className="rounded-2xl bg-white/[0.03] border border-white/5 p-4 space-y-2.5 text-xs">
+            <div className="rounded-2xl bg-foreground/[0.03] border border-line-subtle p-4 space-y-2.5 text-xs">
               {resolved.location?.name && (
-                <div className="flex items-center gap-2 text-white font-medium">
+                <div className="flex items-center gap-2 text-foreground font-medium">
                   <Compass size={14} className="text-sky shrink-0" />
                   <span>{resolved.location.name}</span>
                 </div>
@@ -354,12 +354,12 @@ export const PhotoDetailsDrawer = ({
               {resolved.faces.map((face, i) => (
                 <div
                   key={i}
-                  className="flex items-center gap-2 rounded-xl bg-white/[0.04] border border-white/5 px-3 py-2 text-xs">
+                  className="flex items-center gap-2 rounded-xl bg-foreground/[0.04] border border-line-subtle px-3 py-2 text-xs">
                   <span className="grid size-6 place-items-center rounded-full bg-sky/20 text-sky font-bold text-[10px]">
                     {face.name.charAt(0)}
                   </span>
                   <div>
-                    <p className="font-medium text-white">{face.name}</p>
+                    <p className="font-medium text-foreground">{face.name}</p>
                     {face.confidence && (
                       <p className="text-[10px] text-mist">
                         {Math.round(face.confidence * 100)}% match
@@ -412,7 +412,7 @@ export const PhotoDetailsDrawer = ({
                 }
               }}
               placeholder="Add a new tag..."
-              className="flex-1 rounded-xl bg-white/[0.05] border border-white/10 px-3 py-1.5 text-xs text-white placeholder:text-mist focus:outline-none focus:border-sky"
+              className="flex-1 rounded-xl bg-foreground/[0.05] border border-line-subtle px-3 py-1.5 text-xs text-foreground placeholder:text-mist focus:outline-none focus:border-sky"
             />
             <button
               type="button"
@@ -426,7 +426,7 @@ export const PhotoDetailsDrawer = ({
         </div>
 
         {/* User Album Associations */}
-        <div className="space-y-3 pt-2 border-t border-white/10">
+        <div className="space-y-3 pt-2 border-t border-line-subtle">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-sky">
               <Folder size={15} />
@@ -448,7 +448,7 @@ export const PhotoDetailsDrawer = ({
               {resolved.albums.map((alb) => (
                 <span
                   key={alb}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-white/[0.05] border border-white/10 px-3 py-1.5 text-xs font-medium text-white">
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-foreground/[0.05] border border-line-subtle px-3 py-1.5 text-xs font-medium text-foreground">
                   <Folder size={13} className="text-amber-400" />
                   <span>{alb}</span>
                 </span>

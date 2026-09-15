@@ -14,7 +14,7 @@ import {
   Sun,
   Upload,
 } from "lucide-react";
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/Auth/AuthProvider";
 import UserAvatar from "@/components/Auth/UserAvatar";
@@ -43,7 +43,13 @@ const SettingsPage = () => {
     resetTheme,
   } = useTheme();
 
-  const [name, setName] = useState("");
+  // Stored display name: auth metadata wins, then the profiles table.
+  const storedName =
+    (user?.user_metadata?.display_name as string | undefined) ||
+    profile?.display_name ||
+    "";
+
+  const [name, setName] = useState(storedName);
   const [newKey, setNewKey] = useState("");
   const [info, setInfo] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -55,17 +61,16 @@ const SettingsPage = () => {
   const [importingTheme, setImportingTheme] = useState(false);
   const [themeFeedback, setThemeFeedback] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!user) return;
-    setName(
-      (user.user_metadata?.display_name as string | undefined) ||
-        profile?.display_name ||
-        "",
-    );
-  }, [user, profile?.display_name]);
+  // Re-sync the input when the stored name arrives or changes — adjusted
+  // during render (React's documented pattern) instead of in an effect.
+  const [syncedName, setSyncedName] = useState(storedName);
+  if (storedName !== syncedName) {
+    setSyncedName(storedName);
+    setName(storedName);
+  }
 
-  if (loading) return <p className="text-mist pt-28 text-sm">Loading settings…</p>;
-  if (!user) return <p className="pt-28 text-sm">Please log in to open settings.</p>;
+  if (loading) return <p className="text-mist px-4 pt-28 text-sm">Loading settings…</p>;
+  if (!user) return <p className="px-4 pt-28 text-sm">Please log in to open settings.</p>;
 
   // Save selected preset to Supabase profile
   const handleSelectPreset = async (presetId: string) => {
@@ -233,7 +238,7 @@ const SettingsPage = () => {
   };
 
   return (
-    <section className="mx-auto w-full max-w-lg pt-28 pb-16 sm:pt-32">
+    <section className="mx-auto w-full max-w-lg px-4 pt-28 pb-24 sm:px-6 sm:pt-32">
       <div className="vault-card rounded-3xl p-6 sm:p-8">
         <h2 className="font-display text-2xl font-bold">Settings</h2>
 

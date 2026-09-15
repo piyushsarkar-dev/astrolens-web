@@ -102,7 +102,7 @@ export const AstroHero = ({
 
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="font-display text-2xl font-bold tracking-tight text-white">
+            <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">
               {getTitle()}
             </h1>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-400">
@@ -111,7 +111,7 @@ export const AstroHero = ({
             </span>
           </div>
 
-          <div className="mt-1 flex items-center gap-2 text-xs text-white/50">
+          <div className="mt-1 flex items-center gap-2 text-xs text-foreground/50">
             <span>{totalCount.toLocaleString()} items</span>
             <span>•</span>
             <span>{formatSize(totalSizeBytes)}</span>
@@ -132,7 +132,7 @@ export const AstroHero = ({
         <button
           type="button"
           onClick={onOpenMap}
-          className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3.5 py-2 text-xs font-medium text-white/80 transition hover:bg-white/[0.06] hover:text-white">
+          className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-line-subtle bg-foreground/[0.03] px-3.5 py-2 text-xs font-medium text-foreground/80 transition hover:bg-foreground/[0.06] hover:text-foreground">
           <MapPin
             size={14}
             className="text-emerald-400"
@@ -143,7 +143,7 @@ export const AstroHero = ({
         <button
           type="button"
           onClick={onOpenMemories}
-          className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3.5 py-2 text-xs font-medium text-white/80 transition hover:bg-white/[0.06] hover:text-white">
+          className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-line-subtle bg-foreground/[0.03] px-3.5 py-2 text-xs font-medium text-foreground/80 transition hover:bg-foreground/[0.06] hover:text-foreground">
           <Sparkles
             size={14}
             className="text-rose-400"
@@ -161,8 +161,8 @@ export const AstroHero = ({
             aria-expanded={isMenuOpen}
             className={`grid size-9 cursor-pointer place-items-center rounded-xl border transition ${
               isMenuOpen ?
-                "border-white/20 bg-white/[0.09] text-white"
-              : "border-white/[0.08] bg-white/[0.03] text-white/60 hover:bg-white/[0.06] hover:text-white"
+                "border-line-strong bg-foreground/[0.09] text-foreground"
+              : "border-line-subtle bg-foreground/[0.03] text-foreground/60 hover:bg-foreground/[0.06] hover:text-foreground"
             }`}
             title="More options">
             <MoreHorizontal size={15} />
@@ -171,7 +171,7 @@ export const AstroHero = ({
           {isMenuOpen && (
             <div
               role="menu"
-              className="animate-in fade-in slide-in-from-top-1 absolute top-11 right-0 z-40 w-52 overflow-hidden rounded-xl border border-white/[0.09] bg-[#111318] py-1 shadow-[0_18px_48px_rgba(0,0,0,0.65)]">
+              className="animate-in fade-in slide-in-from-top-1 absolute top-11 right-0 z-40 w-52 overflow-hidden rounded-xl border border-line-subtle bg-vault-low py-1 shadow-[0_18px_48px_rgba(0,0,0,0.65)]">
               {onSelectAll && (
                 <button
                   type="button"
@@ -180,7 +180,7 @@ export const AstroHero = ({
                     onSelectAll();
                     setIsMenuOpen(false);
                   }}
-                  className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-left text-xs text-white/75 transition hover:bg-white/[0.06] hover:text-white">
+                  className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-left text-xs text-foreground/75 transition hover:bg-foreground/[0.06] hover:text-foreground">
                   <ListChecks
                     size={14}
                     className="text-emerald-400"
@@ -197,7 +197,7 @@ export const AstroHero = ({
                     onUpload();
                     setIsMenuOpen(false);
                   }}
-                  className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-left text-xs text-white/75 transition hover:bg-white/[0.06] hover:text-white">
+                  className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-left text-xs text-foreground/75 transition hover:bg-foreground/[0.06] hover:text-foreground">
                   <Upload
                     size={14}
                     className="text-sky"
@@ -214,17 +214,17 @@ export const AstroHero = ({
                     onOpenSettings();
                     setIsMenuOpen(false);
                   }}
-                  className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-left text-xs text-white/75 transition hover:bg-white/[0.06] hover:text-white">
+                  className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-left text-xs text-foreground/75 transition hover:bg-foreground/[0.06] hover:text-foreground">
                   <Settings
                     size={14}
-                    className="text-white/50"
+                    className="text-foreground/50"
                   />
                   <span>Vault settings</span>
                 </button>
               )}
 
               {selectedCount > 0 && (
-                <p className="mt-1 border-t border-white/[0.06] px-3 pt-2 pb-1 font-mono text-[10px] text-white/35">
+                <p className="mt-1 border-t border-line-subtle px-3 pt-2 pb-1 font-mono text-[10px] text-foreground/35">
                   {selectedCount} selected
                 </p>
               )}

@@ -501,7 +501,9 @@ const GalleryPage = ({
   );
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#0c0d10] text-[#e3e2e6]">
+    // pt-16 clears the fixed app header (h-16), which now renders on this
+    // route too — a single header for the whole app.
+    <div className="flex h-dvh w-full overflow-hidden bg-canvas pt-16 text-foreground">
       {/* Left Sidebar */}
       <AstroSidebar
         activeView={activeView}
@@ -521,49 +523,26 @@ const GalleryPage = ({
 
       {/* Main Content Workspace */}
       <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
-        {/* Top Navbar */}
-        <AstroTopNav
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          timeFilter={timeFilter}
-          onTimeFilterChange={setTimeFilter}
-          gridDensity={gridDensity}
-          onGridDensityChange={setGridDensity}
-          sortOrder={sortOrder}
-          onToggleSortOrder={() =>
-            setSortOrder((previous) => (previous === "desc" ? "asc" : "desc"))
-          }
-          isSelectMode={isSelectMode}
-          onToggleSelectMode={handleToggleSelectMode}
-          isExifFilterOpen={isExifFilterOpen}
-          onToggleExifFilter={() => setIsExifFilterOpen((v) => !v)}
-          onStartSlideshow={() => {
-            if (displayedImages.length > 0) setSelectedIndex(0);
-          }}
-          resultCount={displayedImages.length}
-          isLoading={Boolean(userId) && !imagesLoaded && !authLoading}
-        />
-
         {/* Scrollable Gallery Area */}
-        <main className="flex-1 scrollbar-thin scrollbar-thumb-white/10 space-y-4 overflow-y-auto px-8">
+        <main className="flex-1 scrollbar-thin scrollbar-thumb-white/10 space-y-4 overflow-y-auto px-8 py-3">
           {/* Logged-out state — the vault is private to each account. */}
           {showLoginWall ?
             <div className="flex justify-center py-24">
-              <div className="w-full max-w-xl rounded-3xl border border-white/[0.08] bg-white/[0.02] p-8 text-center">
+              <div className="w-full max-w-xl rounded-3xl border border-line-subtle bg-foreground/[0.02] p-8 text-center">
                 <span className="border-sky/20 bg-sky/10 text-sky mx-auto grid size-14 place-items-center rounded-2xl border">
                   <Lock size={24} />
                 </span>
-                <h2 className="font-display mt-5 text-xl font-bold text-white">
+                <h2 className="font-display mt-5 text-xl font-bold text-foreground">
                   Log in to see your photos
                 </h2>
-                <p className="mt-2 text-sm text-white/45">
+                <p className="mt-2 text-sm text-foreground/45">
                   Your gallery is private — each account only sees its own
                   uploads. Log in or create an account to continue.
                 </p>
                 <div className="mt-6 flex items-center justify-center gap-3">
                   <Link
                     href="/login"
-                    className="rounded-full border border-white/10 bg-white/[0.04] px-5 py-2 text-sm font-medium text-white transition hover:bg-white/[0.09]">
+                    className="rounded-full border border-line-subtle bg-foreground/[0.04] px-5 py-2 text-sm font-medium text-foreground transition hover:bg-foreground/[0.09]">
                     Log in
                   </Link>
                   <Link
@@ -592,14 +571,38 @@ const GalleryPage = ({
                 onOpenSettings={() => router.push("/settings")}
               />
 
+              {/* Gallery toolbar — search, filters, grid + slideshow controls.
+                  It sits inside the content flow so there is only one nav bar. */}
+              <AstroTopNav
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                timeFilter={timeFilter}
+                onTimeFilterChange={setTimeFilter}
+                gridDensity={gridDensity}
+                onGridDensityChange={setGridDensity}
+                sortOrder={sortOrder}
+                onToggleSortOrder={() =>
+                  setSortOrder((previous) => (previous === "desc" ? "asc" : "desc"))
+                }
+                isSelectMode={isSelectMode}
+                onToggleSelectMode={handleToggleSelectMode}
+                isExifFilterOpen={isExifFilterOpen}
+                onToggleExifFilter={() => setIsExifFilterOpen((v) => !v)}
+                onStartSlideshow={() => {
+                  if (displayedImages.length > 0) setSelectedIndex(0);
+                }}
+                resultCount={displayedImages.length}
+                isLoading={Boolean(userId) && !imagesLoaded && !authLoading}
+              />
+
               {/* Collapsible EXIF Filter Strip */}
               {isExifFilterOpen && (
-                <div className="animate-in fade-in slide-in-from-top-2 flex flex-wrap items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3.5 font-mono text-xs text-white/70">
-                  <span className="mr-2 text-[10px] font-bold tracking-wider text-white/40 uppercase">
+                <div className="animate-in fade-in slide-in-from-top-2 flex flex-wrap items-center gap-2 rounded-2xl border border-line-subtle bg-foreground/[0.02] p-3.5 font-mono text-xs text-foreground/70">
+                  <span className="mr-2 text-[10px] font-bold tracking-wider text-foreground/40 uppercase">
                     EXIF Tags:
                   </span>
                   {exifChips.length === 0 && (
-                    <span className="text-white/35">
+                    <span className="text-foreground/35">
                       No camera metadata in this vault yet.
                     </span>
                   )}
@@ -615,7 +618,7 @@ const GalleryPage = ({
                       className={`cursor-pointer rounded-lg border px-2.5 py-1 transition ${
                         searchQuery === tag ?
                           "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
-                        : "border-white/[0.08] bg-white/[0.04] hover:bg-white/[0.08] hover:text-white"
+                        : "border-line-subtle bg-foreground/[0.04] hover:bg-foreground/[0.08] hover:text-foreground"
                       }`}>
                       {tag}
                     </button>
@@ -624,7 +627,7 @@ const GalleryPage = ({
                     <button
                       type="button"
                       onClick={() => setSearchQuery("")}
-                      className="ml-auto cursor-pointer rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-white/60 transition hover:text-white">
+                      className="ml-auto cursor-pointer rounded-lg border border-line-subtle bg-foreground/[0.04] px-2.5 py-1 text-foreground/60 transition hover:text-foreground">
                       Clear filter
                     </button>
                   )}
@@ -652,10 +655,10 @@ const GalleryPage = ({
                     <KeyRound size={18} />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="font-display text-sm font-semibold text-white">
+                    <p className="font-display text-sm font-semibold text-foreground">
                       Add your ImgBB API key to enable uploads
                     </p>
-                    <p className="mt-0.5 text-xs text-white/45">
+                    <p className="mt-0.5 text-xs text-foreground/45">
                       Your personal key is free at api.imgbb.com — save it from
                       Settings.
                     </p>

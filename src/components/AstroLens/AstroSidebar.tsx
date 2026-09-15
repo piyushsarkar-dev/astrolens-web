@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Camera,
   Clock,
   Folder,
   HardDrive,
@@ -13,7 +12,6 @@ import {
   Plus,
   Power,
   Settings,
-  ShieldCheck,
   Sun,
   Upload,
 } from "lucide-react";
@@ -104,38 +102,9 @@ export const AstroSidebar = ({
   };
 
   return (
-    <aside className="sticky top-0 z-30 flex h-screen w-72 shrink-0 flex-col justify-between border-r border-white/[0.06] bg-[#0c0d10] select-none">
+    <aside className="z-30 flex h-full w-72 shrink-0 flex-col justify-between border-r border-line-subtle bg-canvas select-none">
       {/* Top Scrollable Content */}
       <div className="flex-1 scrollbar-thin scrollbar-thumb-white/10 space-y-6 overflow-x-hidden overflow-y-auto p-4">
-        {/* Header Branding */}
-        <div className="flex items-center justify-between pt-1">
-          <Link
-            href="/"
-            className="group flex items-center gap-3">
-            <div className="flex size-9 items-center justify-center rounded-xl border border-emerald-500/25 bg-emerald-500/10 text-emerald-400 shadow-md shadow-emerald-950/40 transition group-hover:border-emerald-500/40">
-              <Camera size={18} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-display text-[15px] font-bold tracking-wide text-white">
-                  Astro Lens
-                </span>
-                <span className="size-2 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-              </div>
-              <p className="flex items-center gap-1 text-[11px] font-medium text-white/40">
-                <ShieldCheck
-                  size={11}
-                  className="text-emerald-400/80"
-                />
-                Private photo vault
-              </p>
-            </div>
-          </Link>
-          <div className="grid size-8 place-items-center rounded-lg text-white/30 transition hover:text-white/60">
-            <Lock size={15} />
-          </div>
-        </div>
-
         {/* Upload Photos Gradient Button */}
         <button
           type="button"
@@ -153,7 +122,7 @@ export const AstroSidebar = ({
 
         {/* LIBRARY Section */}
         <div className="space-y-1">
-          <p className="mb-2 px-2 text-[10px] font-bold tracking-widest text-white/35 uppercase">
+          <p className="mb-2 px-2 text-[10px] font-bold tracking-widest text-foreground/35 uppercase">
             Library
           </p>
 
@@ -167,7 +136,7 @@ export const AstroSidebar = ({
             className={`flex w-full cursor-pointer items-center justify-between rounded-xl px-3 py-2 text-sm font-medium transition ${
               activeView.type === "all" && !selectedTag ?
                 "border border-emerald-500/25 bg-emerald-500/10 font-semibold text-emerald-400"
-              : "text-white/60 hover:bg-white/[0.04] hover:text-white"
+              : "text-foreground/60 hover:bg-foreground/[0.04] hover:text-foreground"
             }`}>
             <div className="flex items-center gap-2.5">
               <Images size={16} />
@@ -193,7 +162,7 @@ export const AstroSidebar = ({
             className={`flex w-full cursor-pointer items-center justify-between rounded-xl px-3 py-2 text-sm font-medium transition ${
               activeView.type === "favorites" ?
                 "border border-rose-500/30 bg-rose-500/15 font-semibold text-rose-400"
-              : "text-white/60 hover:bg-white/[0.04] hover:text-white"
+              : "text-foreground/60 hover:bg-foreground/[0.04] hover:text-foreground"
             }`}>
             <div className="flex items-center gap-2.5">
               <Heart
@@ -220,8 +189,8 @@ export const AstroSidebar = ({
             }}
             className={`flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition ${
               activeView.type === "recents" ?
-                "border border-white/15 bg-white/[0.08] font-semibold text-white"
-              : "text-white/60 hover:bg-white/[0.04] hover:text-white"
+                "border border-line-strong bg-foreground/[0.08] font-semibold text-foreground"
+              : "text-foreground/60 hover:bg-foreground/[0.04] hover:text-foreground"
             }`}>
             <Clock size={16} />
             <span>Recents</span>
@@ -236,8 +205,8 @@ export const AstroSidebar = ({
             }}
             className={`flex w-full cursor-pointer items-center justify-between rounded-xl px-3 py-2 text-sm font-medium transition ${
               activeView.type === "hidden" ?
-                "border border-white/15 bg-white/[0.08] font-semibold text-white"
-              : "text-white/60 hover:bg-white/[0.04] hover:text-white"
+                "border border-line-strong bg-foreground/[0.08] font-semibold text-foreground"
+              : "text-foreground/60 hover:bg-foreground/[0.04] hover:text-foreground"
             }`}>
             <div className="flex items-center gap-2.5">
               <Lock size={16} />
@@ -245,7 +214,7 @@ export const AstroSidebar = ({
             </div>
             <KeyRound
               size={13}
-              className="text-white/30"
+              className="text-foreground/30"
             />
           </button>
         </div>
@@ -253,13 +222,13 @@ export const AstroSidebar = ({
         {/* ALBUMS Section */}
         <div className="space-y-1">
           <div className="mb-2 flex items-center justify-between px-2">
-            <p className="text-[10px] font-bold tracking-widest text-white/35 uppercase">
+            <p className="text-[10px] font-bold tracking-widest text-foreground/35 uppercase">
               Albums
             </p>
             <button
               type="button"
               onClick={() => setIsCreatingAlbum((v) => !v)}
-              className="grid size-5 cursor-pointer place-items-center rounded text-white/40 transition hover:bg-white/10 hover:text-white"
+              className="grid size-5 cursor-pointer place-items-center rounded text-foreground/40 transition hover:bg-foreground/10 hover:text-foreground"
               title="New album">
               <Plus size={14} />
             </button>
@@ -275,7 +244,7 @@ export const AstroSidebar = ({
                 value={newAlbumName}
                 onChange={(e) => setNewAlbumName(e.target.value)}
                 placeholder="Album name…"
-                className="w-full rounded-lg border border-white/15 bg-[#14161b] px-2.5 py-1.5 text-xs text-white outline-none focus:border-emerald-400"
+                className="w-full rounded-lg border border-line-strong bg-vault-lowest px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-emerald-400"
               />
             </form>
           )}
@@ -294,18 +263,18 @@ export const AstroSidebar = ({
                 className={`flex w-full cursor-pointer items-center justify-between rounded-xl px-3 py-2 text-sm font-medium transition ${
                   isSelected ?
                     "border border-emerald-500/25 bg-emerald-500/10 font-semibold text-emerald-400"
-                  : "text-white/60 hover:bg-white/[0.04] hover:text-white"
+                  : "text-foreground/60 hover:bg-foreground/[0.04] hover:text-foreground"
                 }`}>
                 <div className="mr-2 flex items-center gap-2.5 truncate">
                   <Folder
                     size={16}
                     className={
-                      isSelected ? "text-emerald-400" : "text-white/40"
+                      isSelected ? "text-emerald-400" : "text-foreground/40"
                     }
                   />
                   <span className="truncate">{album.name}</span>
                 </div>
-                <span className="text-[11px] font-semibold text-white/40">
+                <span className="text-[11px] font-semibold text-foreground/40">
                   {album.count}
                 </span>
               </button>
@@ -316,7 +285,7 @@ export const AstroSidebar = ({
         {/* QUICK FILTERS Section — only shown when real photo tags exist. */}
         {quickFilters.length > 0 && (
           <div>
-            <p className="mb-2.5 px-2 text-[10px] font-bold tracking-widest text-white/35 uppercase">
+            <p className="mb-2.5 px-2 text-[10px] font-bold tracking-widest text-foreground/35 uppercase">
               Quick Filters
             </p>
             <div className="flex flex-wrap gap-1.5 px-2">
@@ -330,7 +299,7 @@ export const AstroSidebar = ({
                     className={`cursor-pointer rounded-lg border px-2.5 py-1 font-mono text-xs font-medium transition ${
                       active ?
                         "border-emerald-500/40 bg-emerald-500/20 text-emerald-300"
-                      : "border-white/[0.06] bg-white/[0.03] text-white/50 hover:bg-white/[0.08] hover:text-white"
+                      : "border-line-subtle bg-foreground/[0.03] text-foreground/50 hover:bg-foreground/[0.08] hover:text-foreground"
                     }`}>
                     {tag}
                   </button>
@@ -342,22 +311,22 @@ export const AstroSidebar = ({
       </div>
 
       {/* Bottom Profile & Storage Card */}
-      <div className="border-t border-white/[0.06] bg-[#090a0d] p-3">
+      <div className="border-t border-line-subtle bg-vault-lowest p-3">
         {/* Storage Bar Card — real vault usage */}
-        <div className="mb-2.5 rounded-xl border border-white/[0.06] bg-white/[0.02] p-2.5">
+        <div className="mb-2.5 rounded-xl border border-line-subtle bg-foreground/[0.02] p-2.5">
           <div className="flex items-center justify-between text-xs">
-            <div className="flex items-center gap-1.5 font-medium text-white/70">
+            <div className="flex items-center gap-1.5 font-medium text-foreground/70">
               <HardDrive
                 size={13}
                 className="text-emerald-400"
               />
               <span>Encrypted Vault</span>
             </div>
-            <span className="font-mono text-[11px] text-white/40">
+            <span className="font-mono text-[11px] text-foreground/40">
               {usedGb.toFixed(1)} / {quotaGb.toFixed(0)} GB
             </span>
           </div>
-          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-foreground/10">
             <div
               className="h-full rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] transition-all duration-500"
               style={{ width: `${usedPercent}%` }}
@@ -377,31 +346,31 @@ export const AstroSidebar = ({
                   avatarUrl={avatarUrl}
                   avatarConfig={avatarConfig}
                   size={34}
-                  className="rounded-xl border border-white/10"
+                  className="rounded-xl border border-line-subtle"
                 />
               : <div className="grid size-[34px] place-items-center rounded-xl border border-white/15 bg-gradient-to-br from-indigo-500 to-purple-600 text-sm font-bold text-white shadow-md">
                   {displayName.charAt(0).toUpperCase()}
                 </div>
               }
-              <span className="absolute -right-0.5 -bottom-0.5 size-2 rounded-full border-2 border-[#090a0d] bg-emerald-400" />
+              <span className="absolute -right-0.5 -bottom-0.5 size-2 rounded-full border-2 border-vault-lowest bg-emerald-400" />
             </div>
             <div className="min-w-0">
-              <p className="truncate text-xs font-semibold text-white transition group-hover:text-emerald-300">
+              <p className="truncate text-xs font-semibold text-foreground transition group-hover:text-emerald-300">
                 {user ? displayName : "Guest"}
               </p>
-              <p className="truncate text-[10px] text-white/40">
+              <p className="truncate text-[10px] text-foreground/40">
                 {user ? "Master Vault" : "Not signed in"}
               </p>
             </div>
           </Link>
 
-          <div className="flex items-center gap-1 text-white/40">
-            {/* Theme toggle is kept in the vault chrome because the global
-                header is hidden on the gallery route. */}
+          <div className="flex items-center gap-1 text-foreground/40">
+            {/* Quick theme toggle — the app header owns the main toggle, this
+                is a convenience next to Settings / Sign out. */}
             <button
               type="button"
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="grid size-7 cursor-pointer place-items-center rounded-lg transition hover:bg-white/10 hover:text-white"
+              className="grid size-7 cursor-pointer place-items-center rounded-lg transition hover:bg-foreground/10 hover:text-foreground"
               title={
                 theme === "dark" ?
                   "Switch to light theme"
@@ -420,7 +389,7 @@ export const AstroSidebar = ({
             <button
               type="button"
               onClick={() => router.push("/settings")}
-              className="grid size-7 cursor-pointer place-items-center rounded-lg transition hover:bg-white/10 hover:text-white"
+              className="grid size-7 cursor-pointer place-items-center rounded-lg transition hover:bg-foreground/10 hover:text-foreground"
               title="Settings">
               <Settings size={15} />
             </button>

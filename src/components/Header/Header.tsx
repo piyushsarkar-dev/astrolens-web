@@ -12,7 +12,7 @@ const Header = () => {
   const pathname = usePathname();
   const { openUploadPicker, isBackingUp } = useBackup();
 
-  if (pathname === "/") return null;
+  const isPhotosRoute = pathname === "/"; // single app-wide nav — the gallery keeps this header too
 
   return (
     <header
@@ -47,7 +47,7 @@ const Header = () => {
         <nav className="flex items-center gap-2">
           <Link
             href={"/"}
-            className="bg-foreground/[0.04] ring-line-subtle hover:bg-foreground/[0.09] rounded-full px-3.5 py-1.5 text-sm font-medium ring-1 backdrop-blur transition">
+            className={`bg-foreground/[0.04] ring-line-subtle hover:bg-foreground/[0.09] rounded-full px-3.5 py-1.5 text-sm font-medium ring-1 backdrop-blur transition ${isPhotosRoute ? "text-sky" : ""}`}>
             Photos
           </Link>
 

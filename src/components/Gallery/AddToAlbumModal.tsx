@@ -78,16 +78,16 @@ export const AddToAlbumModal = ({
       onMouseDown={(e) => e.stopPropagation()}
       onWheel={(e) => e.stopPropagation()}>
       <div
-        className="w-full max-w-md rounded-3xl bg-[#18191c] border border-white/10 p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-150 text-foreground"
+        className="w-full max-w-md rounded-3xl bg-vault-low border border-line-subtle p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-150 text-foreground"
         onClick={(e) => e.stopPropagation()}>
         {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-white/10 pb-4">
+        <div className="flex items-center justify-between border-b border-line-subtle pb-4">
           <div className="flex items-center gap-2.5">
             <span className="grid size-9 place-items-center rounded-xl bg-sky/15 text-sky">
               <FolderPlus size={20} />
             </span>
             <div>
-              <h3 className="font-display text-base font-semibold text-white">
+              <h3 className="font-display text-base font-semibold text-foreground">
                 Add to Album
               </h3>
               <p className="text-mist text-xs">Organize your photos</p>
@@ -97,7 +97,7 @@ export const AddToAlbumModal = ({
           <button
             type="button"
             onClick={onClose}
-            className="grid size-8 place-items-center rounded-full text-white/70 hover:bg-white/10 hover:text-white transition cursor-pointer">
+            className="grid size-8 place-items-center rounded-full text-foreground/70 hover:bg-foreground/10 hover:text-foreground transition cursor-pointer">
             <X size={18} />
           </button>
         </div>
@@ -105,9 +105,9 @@ export const AddToAlbumModal = ({
         {/* Album List */}
         <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
           {allAvailableAlbums.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-xs text-mist space-y-1">
+            <div className="rounded-2xl border border-dashed border-line-subtle p-6 text-center text-xs text-mist space-y-1">
               <Folder className="mx-auto size-6 text-mist/60" />
-              <p className="font-medium text-white/80">No albums yet</p>
+              <p className="font-medium text-foreground/80">No albums yet</p>
               <p>Type a name below to create your first album.</p>
             </div>
           ) : (
@@ -121,8 +121,8 @@ export const AddToAlbumModal = ({
                   onClick={() => void toggleAlbum(albumName)}
                   className={`flex w-full items-center justify-between rounded-2xl px-4 py-3 text-sm font-medium border transition cursor-pointer ${
                     isSelected
-                      ? "bg-sky/20 border-sky/40 text-white"
-                      : "bg-white/[0.03] border-white/5 text-white/80 hover:bg-white/[0.07]"
+                      ? "bg-sky/20 border-sky/40 text-foreground"
+                      : "bg-foreground/[0.03] border-line-subtle text-foreground/80 hover:bg-foreground/[0.07]"
                   }`}>
                   <div className="flex items-center gap-3">
                     <Folder
@@ -136,7 +136,7 @@ export const AddToAlbumModal = ({
                     className={`grid size-5 place-items-center rounded-full border transition ${
                       isSelected
                         ? "bg-sky border-sky text-white"
-                        : "border-white/20 text-transparent"
+                        : "border-line-strong text-transparent"
                     }`}>
                     <Check size={12} strokeWidth={3} />
                   </div>
@@ -147,7 +147,7 @@ export const AddToAlbumModal = ({
         </div>
 
         {/* Create New Album Input */}
-        <div className="pt-2 border-t border-white/10 space-y-2">
+        <div className="pt-2 border-t border-line-subtle space-y-2">
           <p className="text-xs font-semibold text-sky uppercase tracking-wider">
             Create New Album
           </p>
@@ -164,7 +164,7 @@ export const AddToAlbumModal = ({
                 }
               }}
               placeholder="e.g. Vacations, Portfolio..."
-              className="flex-1 rounded-xl bg-white/[0.05] border border-white/10 px-3.5 py-2 text-xs text-white placeholder:text-mist focus:outline-none focus:border-sky"
+              className="flex-1 rounded-xl bg-foreground/[0.05] border border-line-subtle px-3.5 py-2 text-xs text-foreground placeholder:text-mist focus:outline-none focus:border-sky"
             />
 
             <button
