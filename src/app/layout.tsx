@@ -67,11 +67,18 @@ const RootLayout = ({ children }: Readonly<RootLayoutProps>) => {
       lang="en"
       className={`${inter.variable} ${jakarta.variable} ${geistMono.variable} antialiased`}
       suppressHydrationWarning>
-      <body>
-        <ThemeProvider
-          attribute={"class"}
-          defaultTheme="dark"
-          enableSystem={false}>
+      {/* Blocking inline script — runs before React hydrates so the correct
+          theme class is on <html> from the very first paint (no FOUC).
+          Keep the storageKey in sync with ThemeProvider.tsx. */}
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('astrolens-theme');if(t==='light'||t==='dark'){document.documentElement.classList.add(t)}else{document.documentElement.classList.add('dark')}}catch(e){}})();`,
+          }}
+        />
+      </head>
+      <body suppressHydrationWarning>
+        <ThemeProvider>
           <AuthProvider>
             <BackupProvider>
               <Header />
