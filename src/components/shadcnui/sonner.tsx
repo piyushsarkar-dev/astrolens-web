@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme } from "next-themes";
+import { useTheme } from "@/components/Providers/ThemeProvider";
 import { Toaster as Sonner, type ToasterProps } from "sonner";
 
 /**

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Header from "@/components/Header/Header";
 import ThemeProvider from "@/components/Providers/ThemeProvider";
+import { ThemeSync } from "@/components/Providers/ThemeSync";
 import { AuthProvider } from "@/components/Auth/AuthProvider";
 import { BackupProvider, BackupToaster } from "@/components/Backup";
 import { Toaster } from "@/components/shadcnui/sonner";
@@ -73,13 +74,14 @@ const RootLayout = ({ children }: Readonly<RootLayoutProps>) => {
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('astrolens-theme');if(t==='light'||t==='dark'){document.documentElement.classList.add(t)}else{document.documentElement.classList.add('dark')}}catch(e){}})();`,
+            __html: `(function(){try{var t=localStorage.getItem('astrolens-theme');if(t==='light'||t==='dark'){document.documentElement.classList.add(t)}else{document.documentElement.classList.add('dark')};var v=localStorage.getItem('astrolens-theme-vars');if(v){var vars=JSON.parse(v);for(var k in vars){document.documentElement.style.setProperty(k,vars[k])}}}catch(e){}})();`,
           }}
         />
       </head>
       <body suppressHydrationWarning>
         <ThemeProvider>
           <AuthProvider>
+            <ThemeSync />
             <BackupProvider>
               <Header />
 
