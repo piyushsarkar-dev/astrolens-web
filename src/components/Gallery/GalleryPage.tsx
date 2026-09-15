@@ -1,11 +1,16 @@
 "use client";
 
-import { Folder, Heart, KeyRound, Lock } from "lucide-react";
+import { Folder, Heart, KeyRound, Lock, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/components/Auth/AuthProvider";
 import { useBackup } from "@/components/Backup";
-import { AppSidebar, type SidebarView } from "@/components/Navigation/AppSidebar";
+import { SearchBar } from "@/components/Search";
+import {
+  AppSidebar,
+  type SidebarView,
+} from "@/components/Navigation/AppSidebar";
+import { searchImages } from "@/lib/search";
 import type { ImageRecord } from "@/lib/types";
 import ImageGrid from "./ImageGrid";
 import Lightbox from "./Lightbox";
@@ -22,6 +27,7 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [currentView, setCurrentView] = useState<SidebarView>({ type: "all" });
   const [createdAlbums, setCreatedAlbums] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const { subscribeToUploadedImage } = useBackup();
 
   // Handle ?view=favorites from top navbar or URL
@@ -29,7 +35,7 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       if (params.get("view") === "favorites") {
-        setCurrentView({ type: "favorites" });
+                setCurrentView({ type: "favorites" });
       }
     }
   }, []);
@@ -67,9 +73,9 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
 
   const visibleImages = useMemo(
     () =>
-      userId
-        ? [...allImages].sort((a, b) => (b.uploadedAt ?? 0) - (a.uploadedAt ?? 0))
-        : [],
+      userId ?
+        [...allImages].sort((a, b) => (b.uploadedAt ?? 0) - (a.uploadedAt ?? 0))
+      : [],
     [allImages, userId],
   );
 
@@ -108,37 +114,50 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
     return visibleImages;
   }, [visibleImages, currentView]);
 
-  const handleError = useCallback((message: string) => toast.error(message), []);
+  // Images further filtered by the active search query
+  const searchedImages = useMemo(
+    () => searchImages(searchQuery, displayedImages),
+    [searchQuery, displayedImages],
+  );
 
-  const handleDelete = useCallback(
-    async (image: ImageRecord) => {
-      try {
-        const response = await fetch(`/api/images/${encodeURIComponent(image.id)}`, {
-          method: "DELETE",
-        });
-        const json = (await response.json().catch(() => null)) as {
-          error?: string;
-          warning?: string;
-        } | null;
-        if (!response.ok) {
-          throw new Error(json?.error ?? "Could not delete the photo.");
-        }
-        setAllImages((previous) => previous.filter((item) => item.id !== image.id));
-        setSelectedIndex(null);
-        if (json?.warning) {
-          toast.warning("Deleted from your gallery", { description: json.warning });
-        } else {
-          toast.success("Photo deleted from ImgBB and your gallery.");
-        }
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Delete failed.");
-      }
-    },
+  const handleError = useCallback(
+    (message: string) => toast.error(message),
     [],
   );
 
+  const handleDelete = useCallback(async (image: ImageRecord) => {
+    try {
+      const response = await fetch(
+        `/api/images/${encodeURIComponent(image.id)}`,
+        {
+          method: "DELETE",
+        },
+      );
+      const json = (await response.json().catch(() => null)) as {
+        error?: string;
+        warning?: string;
+      } | null;
+      if (!response.ok) {
+        throw new Error(json?.error ?? "Could not delete the photo.");
+      }
+      setAllImages((previous) =>
+        previous.filter((item) => item.id !== image.id),
+      );
+      setSelectedIndex(null);
+      if (json?.warning) {
+        toast.warning("Deleted from your gallery", {
+          description: json.warning,
+        });
+      } else {
+        toast.success("Photo deleted from ImgBB and your gallery.");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Delete failed.");
+    }
+  }, []);
+
   return (
-    <div className="flex flex-col lg:flex-row gap-8 pt-20 pb-12 sm:pt-24 min-h-[calc(100vh-4rem)]">
+    <div className="flex min-h-[calc(100vh-4rem)] flex-col gap-8 pt-20 pb-12 sm:pt-24 lg:flex-row">
       {/* Shadcn-style Left Sidebar Navigation */}
       {userId && (
         <AppSidebar
@@ -154,19 +173,22 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
       )}
 
       {/* Main Gallery Area */}
-      <section className="flex-1 min-w-0 space-y-6">
+      <section className="min-w-0 flex-1 space-y-6">
         {/* Header Indicator for Favorites or Selected Album */}
         {currentView.type === "favorites" && (
-          <div className="flex items-center justify-between pb-3 border-b border-border/50">
+          <div className="border-border/50 flex items-center justify-between border-b pb-3">
             <div className="flex items-center gap-2.5">
               <span className="grid size-8 place-items-center rounded-lg bg-rose-500/15 text-rose-500">
-                <Heart size={18} className="fill-rose-500" />
+                <Heart
+                  size={18}
+                  className="fill-rose-500"
+                />
               </span>
               <div>
-                <h2 className="font-display text-lg font-bold text-foreground">
+                <h2 className="font-display text-foreground text-lg font-bold">
                   Favorites
                 </h2>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   {displayedImages.length}{" "}
                   {displayedImages.length === 1 ? "photo" : "photos"}
                 </p>
@@ -176,23 +198,23 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
             <button
               type="button"
               onClick={() => setCurrentView({ type: "all" })}
-              className="text-xs font-medium text-sky hover:underline cursor-pointer">
+              className="text-sky cursor-pointer text-xs font-medium hover:underline">
               View all photos
             </button>
           </div>
         )}
 
         {currentView.type === "album" && (
-          <div className="flex items-center justify-between pb-3 border-b border-border/50">
+          <div className="border-border/50 flex items-center justify-between border-b pb-3">
             <div className="flex items-center gap-2.5">
               <span className="grid size-8 place-items-center rounded-lg bg-amber-500/15 text-amber-400">
                 <Folder size={18} />
               </span>
               <div>
-                <h2 className="font-display text-lg font-bold text-foreground">
+                <h2 className="font-display text-foreground text-lg font-bold">
                   {currentView.name}
                 </h2>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   {displayedImages.length}{" "}
                   {displayedImages.length === 1 ? "photo" : "photos"} in album
                 </p>
@@ -202,38 +224,73 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
             <button
               type="button"
               onClick={() => setCurrentView({ type: "all" })}
-              className="text-xs font-medium text-sky hover:underline cursor-pointer">
+              className="text-sky cursor-pointer text-xs font-medium hover:underline">
               View all photos
             </button>
           </div>
         )}
 
+        {/* Search Bar — only when logged in and the current view has photos */}
+        {userId && displayedImages.length > 0 && (
+          <SearchBar
+            value={searchQuery}
+            onChange={setSearchQuery}
+            resultCount={searchedImages.length}
+            totalCount={displayedImages.length}
+            className="max-w-2xl"
+          />
+        )}
+
+        {/* No search results message */}
+        {searchQuery &&
+          searchedImages.length === 0 &&
+          displayedImages.length > 0 && (
+            <div className="vault-card border-border/60 flex flex-col items-center gap-4 rounded-3xl border border-dashed p-10 text-center">
+              <div className="bg-sky/10 text-sky grid size-14 place-items-center rounded-full">
+                <Search size={26} />
+              </div>
+              <div>
+                <p className="font-display text-lg font-semibold">
+                  No photos match your search
+                </p>
+                <p className="text-mist mt-1 max-w-md text-sm">
+                  Try checking your spelling or use different keywords.
+                </p>
+              </div>
+            </div>
+          )}
+
         {/* Empty State for Favorites */}
         {currentView.type === "favorites" && displayedImages.length === 0 && (
-          <div className="vault-card p-12 text-center rounded-3xl border border-dashed border-border/60 space-y-3">
-            <div className="grid size-12 place-items-center rounded-2xl bg-rose-500/10 text-rose-400 mx-auto">
-              <Heart size={24} className="fill-rose-500/50" />
+          <div className="vault-card border-border/60 space-y-3 rounded-3xl border border-dashed p-12 text-center">
+            <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-rose-500/10 text-rose-400">
+              <Heart
+                size={24}
+                className="fill-rose-500/50"
+              />
             </div>
-            <p className="font-display text-base font-semibold text-foreground">
+            <p className="font-display text-foreground text-base font-semibold">
               No favorites yet
             </p>
-            <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-              Click the heart icon on any photo in the viewer to add it to your Favorites.
+            <p className="text-muted-foreground mx-auto max-w-sm text-xs">
+              Click the heart icon on any photo in the viewer to add it to your
+              Favorites.
             </p>
           </div>
         )}
 
         {/* Empty State for Album */}
         {currentView.type === "album" && displayedImages.length === 0 && (
-          <div className="vault-card p-12 text-center rounded-3xl border border-dashed border-border/60 space-y-3">
-            <div className="grid size-12 place-items-center rounded-2xl bg-amber-500/10 text-amber-400 mx-auto">
+          <div className="vault-card border-border/60 space-y-3 rounded-3xl border border-dashed p-12 text-center">
+            <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-amber-500/10 text-amber-400">
               <Folder size={24} />
             </div>
-            <p className="font-display text-base font-semibold text-foreground">
+            <p className="font-display text-foreground text-base font-semibold">
               Album is empty
             </p>
-            <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-              Open any photo and click &ldquo;Add to Album&rdquo; to add it to &ldquo;{currentView.name}&rdquo;.
+            <p className="text-muted-foreground mx-auto max-w-sm text-xs">
+              Open any photo and click &ldquo;Add to Album&rdquo; to add it to
+              &ldquo;{currentView.name}&rdquo;.
             </p>
           </div>
         )}
@@ -250,14 +307,18 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
         {!authLoading && !user && (
           <div className="vault-card flex flex-wrap items-center gap-3 rounded-2xl p-4 text-sm sm:p-6">
             <span className="bg-sky/15 text-sky ring-line-subtle grid size-10 shrink-0 place-items-center rounded-full ring-1">
-              <Lock size={18} aria-hidden />
+              <Lock
+                size={18}
+                aria-hidden
+              />
             </span>
             <div className="min-w-0 flex-1">
               <p className="font-display text-base font-semibold">
                 Log in to see your photos
               </p>
               <p className="text-mist mt-0.5 text-sm">
-                Your gallery is private — each account only sees its own uploads. Log in or create an account to continue.
+                Your gallery is private — each account only sees its own
+                uploads. Log in or create an account to continue.
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -268,7 +329,7 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
               </a>
               <a
                 href="/signup"
-                className="bg-sky rounded-full px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-sky/90">
+                className="bg-sky hover:bg-sky/90 rounded-full px-4 py-1.5 text-sm font-semibold text-white transition">
                 Sign up
               </a>
             </div>
@@ -277,40 +338,46 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
 
         {!authLoading && user && !hasImgbbKey && (
           <div className="vault-card flex flex-wrap items-center gap-3 rounded-2xl p-4 text-sm sm:p-6">
-            <span className="bg-amber-500/10 text-amber-500 ring-line-subtle grid size-10 shrink-0 place-items-center rounded-full ring-1">
-              <KeyRound size={18} aria-hidden />
+            <span className="ring-line-subtle grid size-10 shrink-0 place-items-center rounded-full bg-amber-500/10 text-amber-500 ring-1">
+              <KeyRound
+                size={18}
+                aria-hidden
+              />
             </span>
             <div className="min-w-0 flex-1">
               <p className="font-display text-base font-semibold">
                 Add your ImgBB API key to enable uploads
               </p>
               <p className="text-mist mt-0.5 text-sm">
-                Save your personal key — open Settings from your account menu. It is free at api.imgbb.com.
+                Save your personal key — open Settings from your account menu.
+                It is free at api.imgbb.com.
               </p>
             </div>
             <a
               href="/settings"
-              className="bg-sky rounded-full px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-sky/90">
+              className="bg-sky hover:bg-sky/90 rounded-full px-4 py-1.5 text-sm font-semibold text-white transition">
               Open Settings
             </a>
           </div>
         )}
 
         <ImageGrid
-          images={displayedImages}
+          images={searchedImages}
           onSelectImage={setSelectedIndex}
         />
 
-        {userId && selectedIndex !== null && displayedImages.length > 0 && (
+        {userId && selectedIndex !== null && searchedImages.length > 0 && (
           <Lightbox
-            images={displayedImages}
+            images={searchedImages}
             index={selectedIndex}
             onClose={() => setSelectedIndex(null)}
             onNavigate={setSelectedIndex}
             onDelete={handleDelete}
             onUpdateImage={(updated) => {
               setAllImages((previous) =>
-                previous.map((item) => (item.id === updated.id ? updated : item)),
+                previous.map((item) =>
+                  item.id === updated.id ? updated : item,
+                ),
               );
             }}
           />

@@ -1,0 +1,20 @@
+// Kombai Tech Stack Configuration
+// Each value must be a string or an array of strings.
+// Example: "Framework": "Vite" or "Project Type": ["React", "Vue"]
+{
+  "Framework": "NextJS 16",
+  "Router": "App Router",
+  "Authentication": "Supabase Auth",
+  "Icon_Set": "Lucide",
+  "API_Client": "Supabase",
+  "Tailwind_Version": "v4",
+  "Project_Type": "React",
+  "React_Version": "19",
+  "Package_Manager": "npm",
+  "Build_Tool": "Turbopack",
+  "Server_Runtime": "Node.js v24",
+  "ORM_Client_Library": "Supabase",
+  "CSS_Implementation": "Tailwind CSS",
+  "TS_JS": "TS",
+  "Component_Library": "shadcn v4 (Radix UI)"
+}
