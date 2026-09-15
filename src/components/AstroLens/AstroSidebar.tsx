@@ -44,6 +44,8 @@ type AstroSidebarProps = {
   selectedTag: string | null;
   onSelectTag: (tag: string | null) => void;
   albums: Array<{ name: string; count: number }>;
+  /** `#tag` chips derived from the tags genuinely attached to the vault's photos. */
+  quickFilters: string[];
   onCreateAlbum: (name: string) => void;
 };
 
@@ -57,6 +59,7 @@ export const AstroSidebar = ({
   selectedTag,
   onSelectTag,
   albums,
+  quickFilters,
   onCreateAlbum,
 }: AstroSidebarProps) => {
   const { user, profile, avatarUrl, avatarConfig, signOut } = useAuth();
@@ -99,8 +102,6 @@ export const AstroSidebar = ({
     setIsCreatingAlbum(false);
     onSelectView({ type: "album", name: newAlbumName.trim() });
   };
-
-  const quickFilters = ["#RAW", "#B&W", "#LongExposure", "#Cyber"];
 
   return (
     <aside className="sticky top-0 z-30 flex h-screen w-72 shrink-0 flex-col justify-between border-r border-white/[0.06] bg-[#0c0d10] select-none">
@@ -312,30 +313,32 @@ export const AstroSidebar = ({
           })}
         </div>
 
-        {/* QUICK FILTERS Section */}
-        <div>
-          <p className="mb-2.5 px-2 text-[10px] font-bold tracking-widest text-white/35 uppercase">
-            Quick Filters
-          </p>
-          <div className="flex flex-wrap gap-1.5 px-2">
-            {quickFilters.map((tag) => {
-              const active = selectedTag === tag;
-              return (
-                <button
-                  key={tag}
-                  type="button"
-                  onClick={() => onSelectTag(active ? null : tag)}
-                  className={`cursor-pointer rounded-lg border px-2.5 py-1 font-mono text-xs font-medium transition ${
-                    active ?
-                      "border-emerald-500/40 bg-emerald-500/20 text-emerald-300"
-                    : "border-white/[0.06] bg-white/[0.03] text-white/50 hover:bg-white/[0.08] hover:text-white"
-                  }`}>
-                  {tag}
-                </button>
-              );
-            })}
+        {/* QUICK FILTERS Section — only shown when real photo tags exist. */}
+        {quickFilters.length > 0 && (
+          <div>
+            <p className="mb-2.5 px-2 text-[10px] font-bold tracking-widest text-white/35 uppercase">
+              Quick Filters
+            </p>
+            <div className="flex flex-wrap gap-1.5 px-2">
+              {quickFilters.map((tag) => {
+                const active = selectedTag === tag;
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => onSelectTag(active ? null : tag)}
+                    className={`cursor-pointer rounded-lg border px-2.5 py-1 font-mono text-xs font-medium transition ${
+                      active ?
+                        "border-emerald-500/40 bg-emerald-500/20 text-emerald-300"
+                      : "border-white/[0.06] bg-white/[0.03] text-white/50 hover:bg-white/[0.08] hover:text-white"
+                    }`}>
+                    {tag}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Bottom Profile & Storage Card */}

@@ -19,7 +19,6 @@ import {
   type SortOrder,
   type TimeFilterMode,
 } from "@/components/AstroLens";
-import { DEFAULT_VAULT_PHOTOS } from "@/lib/defaultVaultPhotos";
 import { searchImages } from "@/lib/search";
 import type { ImageRecord } from "@/lib/types";
 import Lightbox from "./Lightbox";
@@ -36,16 +35,60 @@ type GalleryPageProps = {
 /** Storage quota displayed by the sidebar vault meter. */
 const VAULT_QUOTA_BYTES = 100 * 1024 * 1024 * 1024; // 100 GB
 
-/** Quick EXIF chips offered by the collapsible filter strip. */
-const EXIF_QUICK_TAGS = [
-  "Sony A7R IV",
-  "Canon R5",
-  "14mm F1.8",
-  "85mm F1.2",
-  "ISO 100",
-  "ISO 3200",
-  "Long Exp 25s",
-];
+/** Caps how many derived filter chips the UI renders at once. */
+const MAX_FILTER_CHIPS = 8;
+
+/**
+ * Derives the EXIF quick-filter chips from the photos actually stored in the
+ * vault. Every chip is a value that genuinely exists on a record, so a chip
+ * always matches at least one photo — nothing is hard-coded or invented.
+ */
+const collectExifChips = (images: ImageRecord[]): string[] => {
+  const chips: string[] = [];
+  const seen = new Set<string>();
+  const push = (value: string | number | null | undefined) => {
+    if (value == null) return;
+    const label = String(value).trim();
+    if (!label || seen.has(label.toLowerCase())) return;
+    seen.add(label.toLowerCase());
+    chips.push(label);
+  };
+
+  for (const image of images) {
+    const meta = image.metadata;
+    if (!meta) continue;
+    push(meta.camera);
+    push(meta.lens);
+    push(meta.focalLength);
+    push(meta.aperture);
+    push(meta.iso);
+    push(meta.shutter);
+    if (chips.length >= MAX_FILTER_CHIPS) break;
+  }
+
+  return chips.slice(0, MAX_FILTER_CHIPS);
+};
+
+/**
+ * Derives the sidebar `#tag` chips from the tags genuinely attached to the
+ * vault's photos. Returns an empty array when no photo carries a tag.
+ */
+const collectTagChips = (images: ImageRecord[]): string[] => {
+  const chips: string[] = [];
+  const seen = new Set<string>();
+
+  for (const image of images) {
+    for (const tag of image.tags ?? []) {
+      const clean = tag.trim();
+      if (!clean || seen.has(clean.toLowerCase())) continue;
+      seen.add(clean.toLowerCase());
+      chips.push(`#${clean}`);
+      if (chips.length >= MAX_FILTER_CHIPS) return chips;
+    }
+  }
+
+  return chips;
+};
 
 /** Maps a raw `?view=` query value onto a real sidebar view. */
 const toViewMode = (view: string | undefined): AstroViewMode => {
@@ -78,11 +121,6 @@ const GalleryPage = ({
 
   // Photos that genuinely belong to the signed-in account.
   const [userImages, setUserImages] = useState<ImageRecord[]>(initialImages);
-  // Reference vault photography showcased by the design. It is only ever
-  // shown to signed-in users and is never mixed into the user's own vault.
-  const [demoImages, setDemoImages] = useState<ImageRecord[]>(
-    () => DEFAULT_VAULT_PHOTOS,
-  );
   // False until the first client-side fetch settles — keeps the empty upload
   // card from flashing before the real data arrives.
   const [imagesLoaded, setImagesLoaded] = useState(initialImages.length > 0);
@@ -152,11 +190,16 @@ const GalleryPage = ({
     [userImages, userId],
   );
 
-  // Everything visible in the gallery: the user's photos + the design showcase.
+  // Everything visible in the gallery: strictly the user's own photos.
   const allImages = useMemo(
-    () => (userId ? [...ownImages, ...demoImages] : []),
-    [userId, ownImages, demoImages],
+    () => (userId ? ownImages : []),
+    [userId, ownImages],
   );
+
+  // Filter chips are derived from photos that genuinely exist in the vault,
+  // so every chip offered by the UI always matches at least one photo.
+  const exifChips = useMemo(() => collectExifChips(allImages), [allImages]);
+  const tagChips = useMemo(() => collectTagChips(allImages), [allImages]);
 
   // Album counts computed from the photos that are actually visible.
   const albumsList = useMemo(() => {
@@ -221,23 +264,19 @@ const GalleryPage = ({
     );
   }, [searchQuery, filteredByTag, sortOrder]);
 
-  // Applies a patch to matching photos in both the user's vault and the
-  // design showcase so optimistic updates stay consistent everywhere.
+  // Applies a patch to matching photos in the user's vault so optimistic
+  // updates stay consistent everywhere.
   const patchImages = useCallback(
     (ids: Set<string>, patch: Partial<ImageRecord>) => {
-      const apply = (list: ImageRecord[]) =>
-        list.map((item) => (ids.has(item.id) ? { ...item, ...patch } : item));
-      setUserImages(apply);
-      setDemoImages(apply);
+      setUserImages((list) =>
+        list.map((item) => (ids.has(item.id) ? { ...item, ...patch } : item)),
+      );
     },
     [],
   );
 
   const removeImages = useCallback((ids: Set<string>) => {
-    const keep = (list: ImageRecord[]) =>
-      list.filter((item) => !ids.has(item.id));
-    setUserImages(keep);
-    setDemoImages(keep);
+    setUserImages((list) => list.filter((item) => !ids.has(item.id)));
   }, []);
 
   // Toggle favorite status on a photo
@@ -441,10 +480,9 @@ const GalleryPage = ({
 
   // Update photo edits/metadata
   const handleUpdateImage = useCallback((updated: ImageRecord) => {
-    const apply = (list: ImageRecord[]) =>
-      list.map((img) => (img.id === updated.id ? updated : img));
-    setUserImages(apply);
-    setDemoImages(apply);
+    setUserImages((list) =>
+      list.map((img) => (img.id === updated.id ? updated : img)),
+    );
   }, []);
 
   const handleError = useCallback((message: string) => {
@@ -475,6 +513,7 @@ const GalleryPage = ({
         selectedTag={selectedTag}
         onSelectTag={setSelectedTag}
         albums={albumsList}
+        quickFilters={tagChips}
         onCreateAlbum={(name) =>
           setCreatedAlbums((prev) => Array.from(new Set([...prev, name])))
         }
@@ -559,7 +598,12 @@ const GalleryPage = ({
                   <span className="mr-2 text-[10px] font-bold tracking-wider text-white/40 uppercase">
                     EXIF Tags:
                   </span>
-                  {EXIF_QUICK_TAGS.map((tag) => (
+                  {exifChips.length === 0 && (
+                    <span className="text-white/35">
+                      No camera metadata in this vault yet.
+                    </span>
+                  )}
+                  {exifChips.map((tag) => (
                     <button
                       key={tag}
                       type="button"
