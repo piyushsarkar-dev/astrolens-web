@@ -632,26 +632,29 @@ export function parseTweakcnCss(cssText: string): {
 /**
  * Extracts CSS variables from tweakcn JSON object
  */
-export function parseTweakcnJson(json: any): {
+export function parseTweakcnJson(json: Record<string, unknown> | null | undefined): {
   dark: Record<string, string>;
   light: Record<string, string>;
   name?: string;
 } {
   const light: Record<string, string> = {};
   const dark: Record<string, string> = {};
-  const name = json?.name || "Tweakcn Theme";
+  const name = typeof json?.name === "string" ? json.name : "Tweakcn Theme";
 
-  const styles = json?.styles || json?.themeState?.styles || json?.cssVars;
+  const rawStyles =
+    (json?.styles as Record<string, unknown> | undefined) ||
+    ((json?.themeState as Record<string, unknown> | undefined)?.styles as Record<string, unknown> | undefined) ||
+    (json?.cssVars as Record<string, unknown> | undefined);
 
-  if (styles) {
-    if (styles.light) {
-      for (const [k, v] of Object.entries(styles.light)) {
+  if (rawStyles) {
+    if (rawStyles.light && typeof rawStyles.light === "object") {
+      for (const [k, v] of Object.entries(rawStyles.light as Record<string, unknown>)) {
         const cleanKey = k.startsWith("--") ? k.slice(2) : k;
         if (typeof v === "string") light[cleanKey] = normalizeColorValue(v);
       }
     }
-    if (styles.dark) {
-      for (const [k, v] of Object.entries(styles.dark)) {
+    if (rawStyles.dark && typeof rawStyles.dark === "object") {
+      for (const [k, v] of Object.entries(rawStyles.dark as Record<string, unknown>)) {
         const cleanKey = k.startsWith("--") ? k.slice(2) : k;
         if (typeof v === "string") dark[cleanKey] = normalizeColorValue(v);
       }

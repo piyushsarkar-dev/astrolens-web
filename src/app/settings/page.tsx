@@ -1,8 +1,11 @@
 "use client";
 
 import {
+  ArrowLeft,
   Check,
   ExternalLink,
+  HardDrive,
+  Info,
   KeyRound,
   Loader2,
   Moon,
@@ -12,14 +15,36 @@ import {
   ShieldCheck,
   Sparkles,
   Sun,
+  Trash2,
   Upload,
+  User,
 } from "lucide-react";
+import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/Auth/AuthProvider";
 import UserAvatar from "@/components/Auth/UserAvatar";
 import { useTheme } from "@/components/Providers/ThemeProvider";
+import { Badge } from "@/components/shadcnui/badge";
+import { Button } from "@/components/shadcnui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/shadcnui/card";
+import { Input } from "@/components/shadcnui/input";
+import { Separator } from "@/components/shadcnui/separator";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/shadcnui/tabs";
 import { COLOR_PRESETS, type CustomThemeData } from "@/lib/themes";
+import { cn } from "@/lib/utils";
 
 const SettingsPage = () => {
   const {
@@ -61,21 +86,45 @@ const SettingsPage = () => {
   const [importingTheme, setImportingTheme] = useState(false);
   const [themeFeedback, setThemeFeedback] = useState<string | null>(null);
 
-  // Re-sync the input when the stored name arrives or changes — adjusted
-  // during render (React's documented pattern) instead of in an effect.
+  // Re-sync input when stored name changes
   const [syncedName, setSyncedName] = useState(storedName);
   if (storedName !== syncedName) {
     setSyncedName(storedName);
     setName(storedName);
   }
 
-  if (loading) return <p className="text-mist px-4 pt-28 text-sm">Loading settings…</p>;
-  if (!user) return <p className="px-4 pt-28 text-sm">Please log in to open settings.</p>;
+  if (loading) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 pt-28 text-muted-foreground">
+        <Loader2 size={24} className="animate-spin text-primary" />
+        <p className="text-sm">Loading settings…</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="mx-auto max-w-md px-4 pt-32 text-center">
+        <Card className="border-border p-8">
+          <KeyRound size={32} className="mx-auto text-muted-foreground mb-3" />
+          <h2 className="text-lg font-semibold">Sign in required</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Please log in to manage your vault settings, custom appearance, and API credentials.
+          </p>
+          <div className="mt-6">
+            <Link href="/login">
+              <Button className="w-full">Sign In</Button>
+            </Link>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   // Save selected preset to Supabase profile
   const handleSelectPreset = async (presetId: string) => {
     applyPreset(presetId);
-    setThemeFeedback("Theme updated.");
+    setThemeFeedback("Theme updated successfully.");
     try {
       const supabase = createClient();
       await supabase.auth.updateUser({
@@ -126,7 +175,7 @@ const SettingsPage = () => {
       const imported: CustomThemeData = data.theme;
       applyCustomTheme(imported);
       setTweakcnInput("");
-      setThemeFeedback(`Imported & applied "${imported.name || "Custom Tweakcn Theme"}"!`);
+      setThemeFeedback(`Applied theme "${imported.name || "Custom Tweakcn Theme"}" live across the full vault!`);
 
       // Persist to Supabase
       const supabase = createClient();
@@ -229,7 +278,7 @@ const SettingsPage = () => {
       });
       if (e2) throw e2;
       await refreshProfile();
-      setInfo("Settings saved.");
+      setInfo("Display name updated successfully.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed.");
     } finally {
@@ -238,287 +287,407 @@ const SettingsPage = () => {
   };
 
   return (
-    <section className="mx-auto w-full max-w-lg px-4 pt-28 pb-24 sm:px-6 sm:pt-32">
-      <div className="vault-card rounded-3xl p-6 sm:p-8">
-        <h2 className="font-display text-2xl font-bold">Settings</h2>
-
-        {/* User Card */}
-        <div className="ring-line-subtle mt-5 flex items-center gap-4 rounded-2xl p-4 ring-1">
-          <UserAvatar
-            seed={user.id}
-            avatarUrl={avatarUrl}
-            avatarConfig={avatarConfig}
-            size={56}
-          />
-          <div className="min-w-0">
-            <p className="truncate text-base font-semibold">
-              {profile?.display_name || name || "Account"}
-            </p>
-            <p className="text-mist truncate text-sm">{user.email}</p>
-          </div>
-        </div>
-
-        {/* Display Name Form */}
-        <form onSubmit={saveName} className="mt-5 space-y-4">
-          <label className="block">
-            <span className="mb-1.5 block text-sm font-medium">Display name</span>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Piyush"
-              className="bg-vault-lowest ring-line-subtle w-full rounded-xl px-4 py-2.5 text-sm ring-1 outline-none focus:ring-2 focus:ring-sky/60"
-            />
-          </label>
-          <button
-            type="submit"
-            disabled={saving}
-            className="bg-sky inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-sky/90 disabled:opacity-60"
+    <div className="min-h-screen bg-canvas text-foreground pt-24 pb-24 sm:pt-28">
+      <div className="mx-auto w-full max-w-4xl px-4 sm:px-6">
+        {/* Top Header & Breadcrumb */}
+        <div className="mb-8 space-y-2">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition mb-2"
           >
-            {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-            Save name
-          </button>
-        </form>
-
-        {/* ================================================================= */}
-        {/* APPEARANCE & THEME CUSTOMIZATION (Logged-in only) */}
-        {/* ================================================================= */}
-        <div className="ring-line-subtle mt-7 rounded-2xl p-4 sm:p-5 ring-1">
-          <div className="flex items-center gap-2">
-            <Palette size={18} className="text-sky" aria-hidden />
-            <p className="text-base font-semibold">Customize Appearance</p>
+            <ArrowLeft size={14} /> Back to Gallery
+          </Link>
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold tracking-tight font-display">
+              Settings
+            </h1>
+            <Badge variant="secondary" className="gap-1.5 px-3 py-1 font-mono text-xs">
+              <ShieldCheck size={14} className="text-emerald-500" />
+              Private Vault
+            </Badge>
           </div>
-          <p className="text-mist mt-1 text-xs">
-            Personalize your Astro Lens interface with curated color themes or your own tweakcn.com configuration.
+          <p className="text-sm text-muted-foreground">
+            Configure your personal profile, encrypted cloud storage credentials, interface aesthetics, and custom themes.
           </p>
-
-          {/* Dark / Light Mode Selector */}
-          <div className="mt-4">
-            <span className="text-mist mb-2 block text-xs font-semibold uppercase tracking-wider">
-              Interface Mode
-            </span>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setTheme("dark")}
-                className={`flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition ring-1 ${
-                  theme === "dark"
-                    ? "bg-sky text-white ring-sky"
-                    : "bg-vault-lowest ring-line-subtle text-mist hover:text-foreground"
-                }`}
-              >
-                <Moon size={15} /> Dark Mode
-              </button>
-              <button
-                type="button"
-                onClick={() => setTheme("light")}
-                className={`flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition ring-1 ${
-                  theme === "light"
-                    ? "bg-sky text-white ring-sky"
-                    : "bg-vault-lowest ring-line-subtle text-mist hover:text-foreground"
-                }`}
-              >
-                <Sun size={15} /> Light Mode
-              </button>
-            </div>
-          </div>
-
-          {/* 8 Color Presets */}
-          <div className="mt-5">
-            <div className="flex items-center justify-between">
-              <span className="text-mist block text-xs font-semibold uppercase tracking-wider">
-                Color Presets
-              </span>
-              {preset !== "default" && (
-                <button
-                  type="button"
-                  onClick={handleResetTheme}
-                  className="text-mist hover:text-foreground flex items-center gap-1 text-xs transition"
-                >
-                  <RotateCcw size={12} /> Reset to Astro Sky
-                </button>
-              )}
-            </div>
-
-            <div className="mt-2.5 grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {COLOR_PRESETS.map((p) => {
-                const isActive = preset === p.id;
-                const accent = theme === "dark" ? p.accentHex : p.accentHexLight;
-                const bgPreview = theme === "dark" ? p.previewBgDark : p.previewBgLight;
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => handleSelectPreset(p.id)}
-                    className={`group relative flex flex-col items-start gap-2 rounded-xl p-2.5 text-left transition ring-1 ${
-                      isActive
-                        ? "bg-vault-high ring-2"
-                        : "bg-vault-lowest ring-line-subtle hover:bg-vault-low"
-                    }`}
-                    style={{
-                      borderColor: isActive ? accent : undefined,
-                    }}
-                  >
-                    <div className="flex w-full items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <span
-                          className="h-4 w-4 rounded-full ring-1 ring-black/20 shadow-sm"
-                          style={{ backgroundColor: bgPreview }}
-                          title="Background tone"
-                        />
-                        <span
-                          className="h-4 w-4 rounded-full ring-1 ring-black/20 shadow-sm"
-                          style={{ backgroundColor: accent }}
-                          title="Accent color"
-                        />
-                      </div>
-                      {isActive && <Check size={14} style={{ color: accent }} />}
-                    </div>
-                    <span className="truncate text-xs font-medium">{p.name}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* tweakcn.com Import Section */}
-          <div className="mt-5 rounded-xl bg-vault-lowest/60 p-3.5 ring-1 ring-line-subtle">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5">
-                <Sparkles size={14} className="text-sky" />
-                <span className="text-xs font-semibold">tweakcn.com Integration</span>
-              </div>
-              <a
-                href="https://tweakcn.com/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sky hover:underline inline-flex items-center gap-1 text-xs font-medium"
-              >
-                Browse tweakcn <ExternalLink size={11} />
-              </a>
-            </div>
-            <p className="text-mist mt-1 text-[11px] leading-relaxed">
-              Design your custom palette on{" "}
-              <a
-                href="https://tweakcn.com/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-foreground underline hover:text-sky"
-              >
-                tweakcn.com
-              </a>
-              , copy the link or CSS snippet, and paste below to apply live.
-            </p>
-
-            <form onSubmit={handleImportTweakcn} className="mt-3 space-y-2">
-              <input
-                type="text"
-                value={tweakcnInput}
-                onChange={(e) => setTweakcnInput(e.target.value)}
-                placeholder="Paste tweakcn URL or CSS code…"
-                className="bg-vault-lowest ring-line-subtle w-full rounded-lg px-3 py-2 text-xs font-mono ring-1 outline-none focus:ring-2 focus:ring-sky/60"
-              />
-              <div className="flex items-center gap-2">
-                <button
-                  type="submit"
-                  disabled={importingTheme || !tweakcnInput.trim()}
-                  className="bg-sky inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-sky/90 disabled:opacity-50"
-                >
-                  {importingTheme ? (
-                    <Loader2 size={13} className="animate-spin" />
-                  ) : (
-                    <Upload size={13} />
-                  )}
-                  Apply Theme
-                </button>
-
-                {preset === "custom" && customTheme && (
-                  <span className="text-leaf text-[11px] font-medium">
-                    ✓ Active: {customTheme.name || "Custom Theme"}
-                  </span>
-                )}
-              </div>
-            </form>
-          </div>
-
-          {themeFeedback && (
-            <p className="text-leaf mt-3 text-xs font-medium">{themeFeedback}</p>
-          )}
         </div>
 
-        {/* ImgBB API Key Section */}
-        <div className="ring-line-subtle mt-6 rounded-2xl p-4 ring-1">
-          <div className="flex items-center gap-2">
-            <KeyRound size={16} className="text-sky" aria-hidden />
-            <p className="text-sm font-semibold">Personal ImgBB API key</p>
-            {profileLoading ? (
-              <span className="text-mist ml-auto text-xs">Loading…</span>
-            ) : keyStatus?.configured ? (
-              <span className="text-leaf ml-auto rounded-full bg-green-500/10 px-2.5 py-0.5 text-xs font-semibold">
-                Connected ······{keyStatus.last4}
-              </span>
-            ) : (
-              <span className="ml-auto rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-500">
-                Not set
-              </span>
-            )}
-          </div>
-          <p className="text-mist mt-1.5 text-xs">
-            Each account uploads with its own key. Free at api.imgbb.com. Without it, uploads stay disabled.
-          </p>
-          <p className="text-leaf mt-1.5 flex items-center gap-1.5 text-xs font-medium">
-            <ShieldCheck size={14} aria-hidden />
-            Stored server-side — the full key is never shown or sent to the browser.
-          </p>
-          <label className="mt-3 block">
-            <span className="mb-1.5 block text-sm font-medium">
-              {keyStatus?.configured ? "Replace key" : "API key"}
-            </span>
-            <input
-              type="password"
-              value={newKey}
-              autoComplete="off"
-              spellCheck={false}
-              placeholder="Paste your ImgBB API key"
-              onChange={(e) => setNewKey(e.target.value)}
-              className="bg-vault-lowest ring-line-subtle w-full rounded-xl px-4 py-2.5 font-mono text-sm ring-1 outline-none focus:ring-2 focus:ring-sky/60"
-            />
-          </label>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={saveKey}
-              disabled={keyBusy || !newKey.trim()}
-              className="bg-sky inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-sky/90 disabled:opacity-60"
-            >
-              {keyBusy ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-              {keyStatus?.configured ? "Replace key" : "Save key"}
-            </button>
-            {keyStatus?.configured && (
-              <button
-                type="button"
-                onClick={removeKey}
-                disabled={keyBusy}
-                className="text-destructive ring-line-subtle ring-destructive/30 inline-flex items-center rounded-full px-4 py-1.5 text-xs font-semibold ring-1 transition hover:bg-red-500/5 disabled:opacity-60"
-              >
-                Remove key
-              </button>
-            )}
-          </div>
-        </div>
-
-        {error && (
-          <p role="alert" className="mt-4 rounded-xl bg-red-500/10 px-4 py-2.5 text-sm text-red-500">
-            {error}
-          </p>
-        )}
+        {/* Feedback Alert Banners */}
         {info && (
-          <p role="status" className="text-leaf mt-4 rounded-xl bg-green-500/10 px-4 py-2.5 text-sm">
-            {info}
-          </p>
+          <div className="mb-6 flex items-center gap-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+            <Check size={16} className="shrink-0" />
+            <span>{info}</span>
+          </div>
         )}
+        {error && (
+          <div className="mb-6 flex items-center gap-2.5 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-xs font-medium text-destructive">
+            <Info size={16} className="shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {/* Shadcn UI Tabs Navigation */}
+        <Tabs defaultValue="appearance" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3 rounded-xl p-1 bg-card border border-border">
+            <TabsTrigger value="appearance" className="flex items-center gap-2 rounded-lg text-xs font-medium">
+              <Palette size={15} /> Appearance
+            </TabsTrigger>
+            <TabsTrigger value="account" className="flex items-center gap-2 rounded-lg text-xs font-medium">
+              <User size={15} /> Account
+            </TabsTrigger>
+            <TabsTrigger value="storage" className="flex items-center gap-2 rounded-lg text-xs font-medium">
+              <HardDrive size={15} /> Storage & API
+            </TabsTrigger>
+          </TabsList>
+
+          {/* ================================================================= */}
+          {/* TAB 1: APPEARANCE & THEME */}
+          {/* ================================================================= */}
+          <TabsContent value="appearance" className="space-y-6 outline-none">
+            {/* Dark / Light Mode Selector Card */}
+            <Card className="border-border bg-card">
+              <CardHeader>
+                <CardTitle className="text-base font-semibold">Interface Mode</CardTitle>
+                <CardDescription>
+                  Choose between high-contrast dark mode or bright day mode.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setTheme("dark")}
+                    className={cn(
+                      "flex items-center justify-center gap-2.5 rounded-xl p-3.5 text-sm font-medium transition ring-1 cursor-pointer",
+                      theme === "dark"
+                        ? "bg-primary text-primary-foreground ring-primary shadow-sm"
+                        : "bg-background ring-border text-muted-foreground hover:text-foreground hover:bg-accent"
+                    )}
+                  >
+                    <Moon size={16} /> Dark Mode
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTheme("light")}
+                    className={cn(
+                      "flex items-center justify-center gap-2.5 rounded-xl p-3.5 text-sm font-medium transition ring-1 cursor-pointer",
+                      theme === "light"
+                        ? "bg-primary text-primary-foreground ring-primary shadow-sm"
+                        : "bg-background ring-border text-muted-foreground hover:text-foreground hover:bg-accent"
+                    )}
+                  >
+                    <Sun size={16} /> Light Mode
+                  </button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 8 Curated Color Presets Card */}
+            <Card className="border-border bg-card">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+                <div>
+                  <CardTitle className="text-base font-semibold">Color Themes</CardTitle>
+                  <CardDescription className="mt-1">
+                    Select a curated palette. Each theme dynamically updates the whole page background, card surfaces, borders, and buttons.
+                  </CardDescription>
+                </div>
+                {preset !== "default" && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleResetTheme}
+                    className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    <RotateCcw size={13} /> Reset to Astro Sky
+                  </Button>
+                )}
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {COLOR_PRESETS.map((p) => {
+                    const isActive = preset === p.id;
+                    const accent = theme === "dark" ? p.accentHex : p.accentHexLight;
+                    const bgPreview = theme === "dark" ? p.previewBgDark : p.previewBgLight;
+
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => handleSelectPreset(p.id)}
+                        className={cn(
+                          "group relative flex flex-col items-start gap-2.5 rounded-xl p-3 text-left transition border cursor-pointer",
+                          isActive
+                            ? "border-primary bg-primary/5 ring-2 ring-primary/30 shadow-sm"
+                            : "border-border bg-background hover:bg-accent hover:border-border/80"
+                        )}
+                        style={{
+                          borderColor: isActive ? accent : undefined,
+                        }}
+                      >
+                        <div className="flex w-full items-center justify-between">
+                          {/* Dual Swatch Preview */}
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              className="size-4 rounded-full ring-1 ring-border shadow-inner"
+                              style={{ backgroundColor: bgPreview }}
+                              title="Background tone"
+                            />
+                            <span
+                              className="size-4 rounded-full ring-1 ring-black/20 shadow-sm"
+                              style={{ backgroundColor: accent }}
+                              title="Accent color"
+                            />
+                          </div>
+                          {isActive && <Check size={14} style={{ color: accent }} />}
+                        </div>
+                        <div>
+                          <p className="truncate text-xs font-semibold text-foreground">{p.name}</p>
+                          <p className="truncate text-[11px] text-muted-foreground mt-0.5">{p.description}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* tweakcn.com Integration Card */}
+            <Card className="border-border bg-card">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                <div className="flex items-center gap-2">
+                  <Sparkles size={16} className="text-primary" />
+                  <CardTitle className="text-base font-semibold">tweakcn.com Live Integration</CardTitle>
+                </div>
+                <a
+                  href="https://tweakcn.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                >
+                  Open tweakcn.com <ExternalLink size={12} />
+                </a>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Design any custom palette on{" "}
+                  <a
+                    href="https://tweakcn.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-foreground underline hover:text-primary"
+                  >
+                    tweakcn.com
+                  </a>
+                  , copy the theme link or CSS snippet, and paste it below. Astro Lens will automatically map and apply your entire palette live.
+                </p>
+
+                <form onSubmit={handleImportTweakcn} className="space-y-3">
+                  <Input
+                    type="text"
+                    value={tweakcnInput}
+                    onChange={(e) => setTweakcnInput(e.target.value)}
+                    placeholder="Paste tweakcn URL (https://tweakcn.com/...) or CSS code snippet…"
+                    className="font-mono text-xs"
+                  />
+                  <div className="flex items-center gap-3">
+                    <Button
+                      type="submit"
+                      disabled={importingTheme || !tweakcnInput.trim()}
+                      className="gap-1.5 text-xs font-semibold"
+                    >
+                      {importingTheme ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : (
+                        <Upload size={14} />
+                      )}
+                      Apply Live Theme
+                    </Button>
+
+                    {preset === "custom" && customTheme && (
+                      <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 gap-1.5 text-xs">
+                        <Check size={12} /> Active: {customTheme.name || "Custom Theme"}
+                      </Badge>
+                    )}
+                  </div>
+                </form>
+              </CardContent>
+              {themeFeedback && (
+                <CardFooter className="border-t border-border pt-3">
+                  <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                    {themeFeedback}
+                  </p>
+                </CardFooter>
+              )}
+            </Card>
+          </TabsContent>
+
+          {/* ================================================================= */}
+          {/* TAB 2: ACCOUNT & PROFILE */}
+          {/* ================================================================= */}
+          <TabsContent value="account" className="space-y-6 outline-none">
+            <Card className="border-border bg-card">
+              <CardHeader>
+                <CardTitle className="text-base font-semibold">Profile Details</CardTitle>
+                <CardDescription>
+                  Manage your display name and view account identity.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* User Identity Banner */}
+                <div className="flex items-center gap-4 rounded-2xl border border-border bg-accent/40 p-4">
+                  <UserAvatar
+                    seed={user.id}
+                    avatarUrl={avatarUrl}
+                    avatarConfig={avatarConfig}
+                    size={64}
+                    className="rounded-2xl border border-border shadow-sm"
+                  />
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-base font-semibold text-foreground truncate">
+                        {profile?.display_name || name || "Vault Owner"}
+                      </p>
+                      <Badge variant="outline" className="text-[10px]">Active</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                    <Link
+                      href="/profile"
+                      className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-medium pt-1"
+                    >
+                      Customize avatar style <ExternalLink size={11} />
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Display Name Form */}
+                <form onSubmit={saveName} className="space-y-4">
+                  <div className="space-y-2">
+                    <label htmlFor="display-name" className="text-xs font-medium text-foreground">
+                      Display Name
+                    </label>
+                    <Input
+                      id="display-name"
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="e.g. Piyush Sarkar"
+                      className="text-sm"
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      This name is shown in the sidebar and top navigation of your vault.
+                    </p>
+                  </div>
+
+                  <Button type="submit" disabled={saving} className="gap-2">
+                    {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                    Save Display Name
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ================================================================= */}
+          {/* TAB 3: STORAGE & API KEYS */}
+          {/* ================================================================= */}
+          <TabsContent value="storage" className="space-y-6 outline-none">
+            <Card className="border-border bg-card">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                <div>
+                  <CardTitle className="text-base font-semibold">ImgBB Cloud API Key</CardTitle>
+                  <CardDescription className="mt-1">
+                    Astro Lens connects to ImgBB to store and serve your photography vault with zero limits.
+                  </CardDescription>
+                </div>
+                {profileLoading ? (
+                  <Badge variant="outline" className="text-xs">Loading…</Badge>
+                ) : keyStatus?.configured ? (
+                  <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 gap-1.5 text-xs">
+                    <span className="size-1.5 rounded-full bg-emerald-500" />
+                    Connected ····{keyStatus.last4}
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-amber-500 border-amber-500/30 bg-amber-500/10 text-xs">
+                    Not Configured
+                  </Badge>
+                )}
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="api-key" className="text-xs font-medium text-foreground">
+                    {keyStatus?.configured ? "Update API Key" : "Enter API Key"}
+                  </label>
+                  <Input
+                    id="api-key"
+                    type="password"
+                    value={newKey}
+                    onChange={(e) => setNewKey(e.target.value)}
+                    placeholder={keyStatus?.configured ? "Enter new API key to replace…" : "Paste your 32-character ImgBB API key…"}
+                    className="font-mono text-xs"
+                  />
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Button
+                    type="button"
+                    onClick={saveKey}
+                    disabled={keyBusy || !newKey.trim()}
+                    className="gap-1.5 text-xs font-semibold"
+                  >
+                    {keyBusy ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                    Save API Key
+                  </Button>
+
+                  {keyStatus?.configured && (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={removeKey}
+                      disabled={keyBusy}
+                      className="gap-1.5 text-xs"
+                    >
+                      <Trash2 size={14} /> Remove Key
+                    </Button>
+                  )}
+                </div>
+
+                <Separator className="my-4" />
+
+                <div className="rounded-xl border border-border bg-accent/30 p-4 space-y-2 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2 font-medium text-foreground">
+                    <Info size={14} className="text-primary" />
+                    <span>How to get your free ImgBB API key</span>
+                  </div>
+                  <p className="leading-relaxed">
+                    1. Create or log into your free account at{" "}
+                    <a
+                      href="https://imgbb.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline hover:text-primary/80"
+                    >
+                      imgbb.com
+                    </a>
+                    .<br />
+                    2. Go to the{" "}
+                    <a
+                      href="https://api.imgbb.com/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline hover:text-primary/80"
+                    >
+                      ImgBB API page
+                    </a>{" "}
+                    and click &quot;Get API key&quot;.<br />
+                    3. Copy your 32-character key and paste it above. Your key is securely stored in your personal profile.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
-    </section>
+    </div>
   );
 };
 
