@@ -12,13 +12,27 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-const HomePage = async () => {
+type HomePageProps = {
+  searchParams: Promise<{ view?: string | string[] }>;
+};
+
+const HomePage = async ({ searchParams }: HomePageProps) => {
+  // ?view=favorites|recents|hidden is used by the header / settings links.
+  const params = await searchParams;
+  const rawView = params.view;
+  const initialView = Array.isArray(rawView) ? rawView[0] : rawView;
+
   // Server-side: only the logged-in user's own photos.
   // Logged out → empty gallery (client shows the login wall).
   let initialImages: ImageRecord[] = [];
+  // true/false = the server confirmed the session; undefined = unknown.
+  let initialUser: boolean | undefined;
   try {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    initialUser = Boolean(user);
     if (user) {
       initialImages = sortImagesNewestFirst(await readImages(user.id));
     }
@@ -26,7 +40,13 @@ const HomePage = async () => {
     initialImages = [];
   }
 
-  return <GalleryPage initialImages={initialImages} />;
+  return (
+    <GalleryPage
+      initialImages={initialImages}
+      initialView={initialView}
+      initialUser={initialUser}
+    />
+  );
 };
 
 export default HomePage;

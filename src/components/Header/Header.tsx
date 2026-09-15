@@ -3,12 +3,16 @@
 import { Heart, UploadCloud } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import ThemeToggleButton from "../ThemeToggleButton";
 import UserMenu from "../Auth/UserMenu";
 import { useBackup } from "../Backup";
 
 const Header = () => {
+  const pathname = usePathname();
   const { openUploadPicker, isBackingUp } = useBackup();
+
+  if (pathname === "/") return null;
 
   return (
     <header

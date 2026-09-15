@@ -1,58 +1,120 @@
 "use client";
 
-import { Folder, Heart, KeyRound, Lock, Search } from "lucide-react";
+import { KeyRound, Lock } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/components/Auth/AuthProvider";
 import { useBackup } from "@/components/Backup";
-import { SearchBar } from "@/components/Search";
 import {
-  AppSidebar,
-  type SidebarView,
-} from "@/components/Navigation/AppSidebar";
+  AstroBottomStatusBar,
+  AstroHero,
+  AstroSelectionBar,
+  AstroSidebar,
+  AstroTimelineGrid,
+  AstroTopNav,
+  type AstroViewMode,
+  type GridDensity,
+  type SortOrder,
+  type TimeFilterMode,
+} from "@/components/AstroLens";
+import { DEFAULT_VAULT_PHOTOS } from "@/lib/defaultVaultPhotos";
 import { searchImages } from "@/lib/search";
 import type { ImageRecord } from "@/lib/types";
-import ImageGrid from "./ImageGrid";
 import Lightbox from "./Lightbox";
 import UploadSection from "./UploadSection";
 
 type GalleryPageProps = {
   initialImages: ImageRecord[];
+  /** `?view=favorites|recents|hidden` coming from the header / settings links. */
+  initialView?: string;
+  /** Server-confirmed session state (undefined when it could not be checked). */
+  initialUser?: boolean;
 };
 
-const GalleryPage = ({ initialImages }: GalleryPageProps) => {
+/** Storage quota displayed by the sidebar vault meter. */
+const VAULT_QUOTA_BYTES = 100 * 1024 * 1024 * 1024; // 100 GB
+
+/** Quick EXIF chips offered by the collapsible filter strip. */
+const EXIF_QUICK_TAGS = [
+  "Sony A7R IV",
+  "Canon R5",
+  "14mm F1.8",
+  "85mm F1.2",
+  "ISO 100",
+  "ISO 3200",
+  "Long Exp 25s",
+];
+
+/** Maps a raw `?view=` query value onto a real sidebar view. */
+const toViewMode = (view: string | undefined): AstroViewMode => {
+  switch (view) {
+    case "favorites":
+      return { type: "favorites" };
+    case "recents":
+      return { type: "recents" };
+    case "hidden":
+      return { type: "hidden" };
+    default:
+      return { type: "all" };
+  }
+};
+
+const GalleryPage = ({
+  initialImages,
+  initialView,
+  initialUser,
+}: GalleryPageProps) => {
   const { user, loading: authLoading, hasImgbbKey } = useAuth();
   const userId = user?.id ?? null;
-  const [allImages, setAllImages] = useState<ImageRecord[]>(initialImages);
-  // True from the start when the server already told us the user has images,
-  // otherwise flips to true once the client-side fetch settles — this prevents
-  // the upload card from flashing before real data arrives.
+
+  // The server already knows whether a session exists, so the first paint is
+  // correct: no "0 items" flash for signed-in users, and no gallery flash for
+  // signed-out visitors.
+  const showLoginWall =
+    !userId &&
+    (initialUser === false || (initialUser === undefined && !authLoading));
+
+  // Photos that genuinely belong to the signed-in account.
+  const [userImages, setUserImages] = useState<ImageRecord[]>(initialImages);
+  // Reference vault photography showcased by the design. It is only ever
+  // shown to signed-in users and is never mixed into the user's own vault.
+  const [demoImages, setDemoImages] = useState<ImageRecord[]>(
+    () => DEFAULT_VAULT_PHOTOS,
+  );
+  // False until the first client-side fetch settles — keeps the empty upload
+  // card from flashing before the real data arrives.
   const [imagesLoaded, setImagesLoaded] = useState(initialImages.length > 0);
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-  const [currentView, setCurrentView] = useState<SidebarView>({ type: "all" });
-  const [createdAlbums, setCreatedAlbums] = useState<string[]>([]);
+
+  const [activeView, setActiveView] = useState<AstroViewMode>(() =>
+    toViewMode(initialView),
+  );
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const { subscribeToUploadedImage } = useBackup();
+  const [timeFilter, setTimeFilter] = useState<TimeFilterMode>("Days");
+  const [gridDensity, setGridDensity] = useState<GridDensity>("normal");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkBusy, setIsBulkBusy] = useState(false);
+  const [isExifFilterOpen, setIsExifFilterOpen] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [createdAlbums, setCreatedAlbums] = useState<string[]>([]);
 
-  // Handle ?view=favorites from top navbar or URL
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("view") === "favorites") {
-                setCurrentView({ type: "favorites" });
-      }
-    }
-  }, []);
+  const { subscribeToUploadedImage, openUploadPicker } = useBackup();
+  const router = useRouter();
 
+  // Handle uploaded images in real-time
   const handleUploaded = useCallback((newImages: ImageRecord[]) => {
-    setAllImages((previous) => {
-      const byId = new Map(previous.map((image) => [image.id, image]));
-      for (const image of newImages) byId.set(image.id, image);
+    setUserImages((previous) => {
+      const byId = new Map(previous.map((img) => [img.id, img]));
+      for (const img of newImages) byId.set(img.id, img);
       return [...byId.values()];
     });
+    setImagesLoaded(true);
   }, []);
 
-  // Listen for uploads initiated from anywhere (e.g. the Navbar Upload button)
   useEffect(() => {
     const unsubscribe = subscribeToUploadedImage((uploadedRecord) => {
       handleUploaded([uploadedRecord]);
@@ -60,17 +122,16 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
     return unsubscribe;
   }, [subscribeToUploadedImage, handleUploaded]);
 
-  // Reload ONLY the signed-in user's photos whenever the account changes.
+  // Sync fresh images from backend when user logs in
   useEffect(() => {
     if (authLoading || !userId) return;
     let cancelled = false;
     fetch("/api/images", { cache: "no-store" })
       .then((res) => res.json())
       .then((json: { data?: ImageRecord[] } | null) => {
-        if (!cancelled) {
-          setAllImages(json?.data ?? []);
-          setImagesLoaded(true);
-        }
+        if (cancelled) return;
+        setUserImages(json?.data ?? []);
+        setImagesLoaded(true);
       })
       .catch(() => {
         if (!cancelled) setImagesLoaded(true);
@@ -80,18 +141,27 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
     };
   }, [userId, authLoading]);
 
-  const visibleImages = useMemo(
+  // The account's own photos, newest first.
+  const ownImages = useMemo(
     () =>
       userId ?
-        [...allImages].sort((a, b) => (b.uploadedAt ?? 0) - (a.uploadedAt ?? 0))
+        [...userImages].sort(
+          (a, b) => (b.uploadedAt ?? 0) - (a.uploadedAt ?? 0),
+        )
       : [],
-    [allImages, userId],
+    [userImages, userId],
   );
 
-  // Dynamic albums list computed from user's photos and created albums
+  // Everything visible in the gallery: the user's photos + the design showcase.
+  const allImages = useMemo(
+    () => (userId ? [...ownImages, ...demoImages] : []),
+    [userId, ownImages, demoImages],
+  );
+
+  // Album counts computed from the photos that are actually visible.
   const albumsList = useMemo(() => {
     const counts = new Map<string, number>();
-    for (const img of visibleImages) {
+    for (const img of allImages) {
       for (const alb of img.albums || []) {
         counts.set(alb, (counts.get(alb) || 0) + 1);
       }
@@ -103,296 +173,502 @@ const GalleryPage = ({ initialImages }: GalleryPageProps) => {
       name,
       count,
     }));
-  }, [visibleImages, createdAlbums]);
+  }, [allImages, createdAlbums]);
 
   const favoritesCount = useMemo(
-    () => visibleImages.filter((img) => img.isFavorite).length,
-    [visibleImages],
+    () => allImages.filter((img) => img.isFavorite).length,
+    [allImages],
   );
 
-  // Images filtered by current sidebar view
-  const displayedImages = useMemo(() => {
-    if (currentView.type === "favorites") {
-      return visibleImages.filter((img) => img.isFavorite);
+  // Filtered by current sidebar view mode
+  const filteredByView = useMemo(() => {
+    if (activeView.type === "favorites") {
+      return allImages.filter((img) => img.isFavorite);
     }
-    if (currentView.type === "album") {
-      return visibleImages.filter((img) =>
-        img.albums?.includes(currentView.name),
+    if (activeView.type === "album") {
+      return allImages.filter((img) => img.albums?.includes(activeView.name));
+    }
+    if (activeView.type === "recents") {
+      return [...allImages].sort(
+        (a, b) => (b.uploadedAt ?? 0) - (a.uploadedAt ?? 0),
       );
     }
-    return visibleImages;
-  }, [visibleImages, currentView]);
+    if (activeView.type === "hidden") {
+      return allImages.filter((img) => img.tags?.includes("Hidden"));
+    }
+    return allImages;
+  }, [allImages, activeView]);
 
-  // Images further filtered by the active search query
-  const searchedImages = useMemo(
-    () => searchImages(searchQuery, displayedImages),
-    [searchQuery, displayedImages],
-  );
+  // Filtered by selected quick filter tag
+  const filteredByTag = useMemo(() => {
+    if (!selectedTag) return filteredByView;
+    const cleanTag = selectedTag.replace("#", "").toLowerCase();
+    return filteredByView.filter((img) => {
+      const tagMatch = img.tags?.some((t) => t.toLowerCase() === cleanTag);
+      const titleMatch = img.title.toLowerCase().includes(cleanTag);
+      const mimeMatch = img.mime?.toLowerCase().includes(cleanTag);
+      return tagMatch || titleMatch || mimeMatch;
+    });
+  }, [filteredByView, selectedTag]);
 
-  const handleError = useCallback(
-    (message: string) => toast.error(message),
+  // Filtered by live search query, then ordered by the sort toggle.
+  const displayedImages = useMemo(() => {
+    const matched = searchImages(searchQuery, filteredByTag);
+    return [...matched].sort((a, b) =>
+      sortOrder === "desc" ?
+        (b.uploadedAt ?? 0) - (a.uploadedAt ?? 0)
+      : (a.uploadedAt ?? 0) - (b.uploadedAt ?? 0),
+    );
+  }, [searchQuery, filteredByTag, sortOrder]);
+
+  // Applies a patch to matching photos in both the user's vault and the
+  // design showcase so optimistic updates stay consistent everywhere.
+  const patchImages = useCallback(
+    (ids: Set<string>, patch: Partial<ImageRecord>) => {
+      const apply = (list: ImageRecord[]) =>
+        list.map((item) => (ids.has(item.id) ? { ...item, ...patch } : item));
+      setUserImages(apply);
+      setDemoImages(apply);
+    },
     [],
   );
 
-  const handleDelete = useCallback(async (image: ImageRecord) => {
-    try {
-      const response = await fetch(
-        `/api/images/${encodeURIComponent(image.id)}`,
-        {
-          method: "DELETE",
-        },
-      );
-      const json = (await response.json().catch(() => null)) as {
-        error?: string;
-        warning?: string;
-      } | null;
-      if (!response.ok) {
-        throw new Error(json?.error ?? "Could not delete the photo.");
-      }
-      setAllImages((previous) =>
-        previous.filter((item) => item.id !== image.id),
-      );
-      setSelectedIndex(null);
-      if (json?.warning) {
-        toast.warning("Deleted from your gallery", {
-          description: json.warning,
-        });
-      } else {
-        toast.success("Photo deleted from ImgBB and your gallery.");
-      }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Delete failed.");
-    }
+  const removeImages = useCallback((ids: Set<string>) => {
+    const keep = (list: ImageRecord[]) =>
+      list.filter((item) => !ids.has(item.id));
+    setUserImages(keep);
+    setDemoImages(keep);
   }, []);
 
-  return (
-    <div className="flex min-h-[calc(100vh-4rem)] flex-col gap-8 pt-20 pb-12 sm:pt-24 lg:flex-row">
-      {/* Shadcn-style Left Sidebar Navigation */}
-      {userId && (
-        <AppSidebar
-          activeView={currentView}
-          onSelectView={setCurrentView}
-          allPhotosCount={visibleImages.length}
-          favoritesCount={favoritesCount}
-          albums={albumsList}
-          onCreateAlbum={(name) =>
-            setCreatedAlbums((prev) => Array.from(new Set([...prev, name])))
+  // Toggle favorite status on a photo
+  const handleToggleFavorite = useCallback(
+    async (image: ImageRecord, e: React.MouseEvent) => {
+      e.stopPropagation();
+      const nextFavorite = !image.isFavorite;
+
+      // Update state locally immediately
+      patchImages(new Set([image.id]), { isFavorite: nextFavorite });
+
+      // If managed photo, persist to server
+      if (image.managed) {
+        try {
+          await fetch(`/api/images/${encodeURIComponent(image.id)}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ isFavorite: nextFavorite }),
+          });
+        } catch {
+          // Keep local state
+        }
+      }
+
+      toast.success(
+        nextFavorite ? "Added to Favorites" : "Removed from Favorites",
+      );
+    },
+    [patchImages],
+  );
+
+  // Multi-select handlers
+  const handleToggleSelectItem = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  // "Select all" inside a timeline group also switches on select mode so the
+  // bulk action bar appears immediately.
+  const handleSelectGroup = useCallback(
+    (groupItemIds: string[]) => {
+      const allSelected = groupItemIds.every((id) => selectedIds.has(id));
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        if (allSelected) {
+          groupItemIds.forEach((id) => next.delete(id));
+        } else {
+          groupItemIds.forEach((id) => next.add(id));
+        }
+        return next;
+      });
+      if (!allSelected) setIsSelectMode(true);
+    },
+    [selectedIds],
+  );
+
+  // Sidebar view switching always closes the lightbox and drops any selection.
+  const handleSelectView = useCallback((view: AstroViewMode) => {
+    setActiveView(view);
+    setSelectedIndex(null);
+    setSelectedIds(new Set());
+    setIsSelectMode(false);
+  }, []);
+
+  const handleSelectAll = useCallback(() => {
+    setSelectedIds(new Set(displayedImages.map((img) => img.id)));
+    setIsSelectMode(true);
+  }, [displayedImages]);
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
+
+  const handleToggleSelectMode = useCallback(() => {
+    setIsSelectMode((previous) => !previous);
+    setSelectedIds(new Set());
+  }, []);
+
+  // Bulk favorite for every selected photo
+  const handleBulkFavorite = useCallback(async () => {
+    const targets = allImages.filter((img) => selectedIds.has(img.id));
+    if (targets.length === 0) return;
+
+    const nextFavorite = !targets.every((img) => img.isFavorite);
+    setIsBulkBusy(true);
+    patchImages(new Set(targets.map((img) => img.id)), {
+      isFavorite: nextFavorite,
+    });
+
+    await Promise.all(
+      targets
+        .filter((img) => img.managed)
+        .map((img) =>
+          fetch(`/api/images/${encodeURIComponent(img.id)}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ isFavorite: nextFavorite }),
+          }).catch(() => null),
+        ),
+    );
+
+    setIsBulkBusy(false);
+    toast.success(
+      `${targets.length} photo${targets.length === 1 ? "" : "s"} ${
+        nextFavorite ? "added to" : "removed from"
+      } Favorites`,
+    );
+  }, [allImages, selectedIds, patchImages]);
+
+  // Bulk delete for every selected photo
+  const handleBulkDelete = useCallback(async () => {
+    const targets = allImages.filter((img) => selectedIds.has(img.id));
+    if (targets.length === 0) return;
+
+    const managed = targets.filter((img) => img.managed);
+    const confirmed = window.confirm(
+      managed.length > 0 ?
+        `Delete ${managed.length} photo${managed.length === 1 ? "" : "s"} from ImgBB and your vault?`
+      : `Remove ${targets.length} photo${targets.length === 1 ? "" : "s"} from this view?`,
+    );
+    if (!confirmed) return;
+
+    setIsBulkBusy(true);
+    let failed = 0;
+
+    await Promise.all(
+      managed.map(async (img) => {
+        try {
+          const response = await fetch(
+            `/api/images/${encodeURIComponent(img.id)}`,
+            { method: "DELETE" },
+          );
+          if (!response.ok) failed += 1;
+        } catch {
+          failed += 1;
+        }
+      }),
+    );
+
+    removeImages(new Set(targets.map((img) => img.id)));
+    setSelectedIds(new Set());
+    setIsSelectMode(false);
+    setIsBulkBusy(false);
+
+    if (failed > 0) {
+      toast.error(
+        `${failed} photo${failed === 1 ? "" : "s"} could not be deleted.`,
+      );
+    } else {
+      toast.success(
+        `${targets.length} photo${targets.length === 1 ? "" : "s"} removed.`,
+      );
+    }
+  }, [allImages, selectedIds, removeImages]);
+
+  // Delete a single photo (from the lightbox)
+  const handleDelete = useCallback(
+    async (image: ImageRecord) => {
+      try {
+        if (image.managed) {
+          const response = await fetch(
+            `/api/images/${encodeURIComponent(image.id)}`,
+            { method: "DELETE" },
+          );
+          const json = (await response.json().catch(() => null)) as {
+            error?: string;
+            warning?: string;
+          } | null;
+          if (!response.ok) {
+            throw new Error(json?.error ?? "Could not delete the photo.");
           }
+          if (json?.warning) {
+            toast.warning("Deleted from your gallery", {
+              description: json.warning,
+            });
+          } else {
+            toast.success("Photo deleted from ImgBB and your gallery.");
+          }
+        } else {
+          toast.success("Photo removed from this view.");
+        }
+
+        removeImages(new Set([image.id]));
+        setSelectedIds((prev) => {
+          if (!prev.has(image.id)) return prev;
+          const next = new Set(prev);
+          next.delete(image.id);
+          return next;
+        });
+        setSelectedIndex(null);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Delete failed.");
+      }
+    },
+    [removeImages],
+  );
+
+  // Update photo edits/metadata
+  const handleUpdateImage = useCallback((updated: ImageRecord) => {
+    const apply = (list: ImageRecord[]) =>
+      list.map((img) => (img.id === updated.id ? updated : img));
+    setUserImages(apply);
+    setDemoImages(apply);
+  }, []);
+
+  const handleError = useCallback((message: string) => {
+    toast.error(message);
+  }, []);
+
+  // Real totals — the sidebar meter only counts the user's own photos.
+  const totalBytes = useMemo(
+    () => allImages.reduce((acc, img) => acc + (img.size || 0), 0),
+    [allImages],
+  );
+
+  const ownBytes = useMemo(
+    () => ownImages.reduce((acc, img) => acc + (img.size || 0), 0),
+    [ownImages],
+  );
+
+  return (
+    <div className="flex h-screen w-screen overflow-hidden bg-[#0c0d10] text-[#e3e2e6]">
+      {/* Left Sidebar */}
+      <AstroSidebar
+        activeView={activeView}
+        onSelectView={handleSelectView}
+        totalPhotosCount={allImages.length}
+        favoritesCount={favoritesCount}
+        usedBytes={ownBytes}
+        quotaBytes={VAULT_QUOTA_BYTES}
+        selectedTag={selectedTag}
+        onSelectTag={setSelectedTag}
+        albums={albumsList}
+        onCreateAlbum={(name) =>
+          setCreatedAlbums((prev) => Array.from(new Set([...prev, name])))
+        }
+      />
+
+      {/* Main Content Workspace */}
+      <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
+        {/* Top Navbar */}
+        <AstroTopNav
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          timeFilter={timeFilter}
+          onTimeFilterChange={setTimeFilter}
+          gridDensity={gridDensity}
+          onGridDensityChange={setGridDensity}
+          sortOrder={sortOrder}
+          onToggleSortOrder={() =>
+            setSortOrder((previous) => (previous === "desc" ? "asc" : "desc"))
+          }
+          isSelectMode={isSelectMode}
+          onToggleSelectMode={handleToggleSelectMode}
+          isExifFilterOpen={isExifFilterOpen}
+          onToggleExifFilter={() => setIsExifFilterOpen((v) => !v)}
+          onStartSlideshow={() => {
+            if (displayedImages.length > 0) setSelectedIndex(0);
+          }}
+          resultCount={displayedImages.length}
+          isLoading={Boolean(userId) && !imagesLoaded && !authLoading}
+        />
+
+        {/* Scrollable Gallery Area */}
+        <main className="flex-1 scrollbar-thin scrollbar-thumb-white/10 space-y-4 overflow-y-auto px-8">
+          {/* Logged-out state — the vault is private to each account. */}
+          {showLoginWall ?
+            <div className="flex justify-center py-24">
+              <div className="w-full max-w-xl rounded-3xl border border-white/[0.08] bg-white/[0.02] p-8 text-center">
+                <span className="border-sky/20 bg-sky/10 text-sky mx-auto grid size-14 place-items-center rounded-2xl border">
+                  <Lock size={24} />
+                </span>
+                <h2 className="font-display mt-5 text-xl font-bold text-white">
+                  Log in to see your photos
+                </h2>
+                <p className="mt-2 text-sm text-white/45">
+                  Your gallery is private — each account only sees its own
+                  uploads. Log in or create an account to continue.
+                </p>
+                <div className="mt-6 flex items-center justify-center gap-3">
+                  <Link
+                    href="/login"
+                    className="rounded-full border border-white/10 bg-white/[0.04] px-5 py-2 text-sm font-medium text-white transition hover:bg-white/[0.09]">
+                    Log in
+                  </Link>
+                  <Link
+                    href="/signup"
+                    className="bg-sky hover:bg-sky/90 rounded-full px-5 py-2 text-sm font-semibold text-white transition">
+                    Sign up
+                  </Link>
+                </div>
+              </div>
+            </div>
+          : <>
+              {/* Hero Section */}
+              <AstroHero
+                view={activeView}
+                totalCount={allImages.length}
+                totalSizeBytes={totalBytes}
+                selectedCount={selectedIds.size}
+                onOpenMap={() =>
+                  toast.info("Interactive places map opening soon.")
+                }
+                onOpenMemories={() =>
+                  toast.info("Curated AI memories vault opening soon.")
+                }
+                onSelectAll={handleSelectAll}
+                onUpload={openUploadPicker}
+                onOpenSettings={() => router.push("/settings")}
+              />
+
+              {/* Collapsible EXIF Filter Strip */}
+              {isExifFilterOpen && (
+                <div className="animate-in fade-in slide-in-from-top-2 flex flex-wrap items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3.5 font-mono text-xs text-white/70">
+                  <span className="mr-2 text-[10px] font-bold tracking-wider text-white/40 uppercase">
+                    EXIF Tags:
+                  </span>
+                  {EXIF_QUICK_TAGS.map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() =>
+                        setSearchQuery((previous) =>
+                          previous === tag ? "" : tag,
+                        )
+                      }
+                      className={`cursor-pointer rounded-lg border px-2.5 py-1 transition ${
+                        searchQuery === tag ?
+                          "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
+                        : "border-white/[0.08] bg-white/[0.04] hover:bg-white/[0.08] hover:text-white"
+                      }`}>
+                      {tag}
+                    </button>
+                  ))}
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery("")}
+                      className="ml-auto cursor-pointer rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-white/60 transition hover:text-white">
+                      Clear filter
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Bulk actions — only while photos are selected in Select mode */}
+              {isSelectMode && selectedIds.size > 0 && (
+                <AstroSelectionBar
+                  selectedCount={selectedIds.size}
+                  totalCount={displayedImages.length}
+                  isBusy={isBulkBusy}
+                  onFavoriteSelected={handleBulkFavorite}
+                  onDeleteSelected={handleBulkDelete}
+                  onSelectAll={handleSelectAll}
+                  onClearSelection={handleClearSelection}
+                  onExitSelectMode={handleToggleSelectMode}
+                />
+              )}
+
+              {/* ImgBB key reminder — uploads need a personal API key. */}
+              {imagesLoaded && !hasImgbbKey && (
+                <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/[0.06] p-4 text-sm">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-full bg-amber-500/10 text-amber-400">
+                    <KeyRound size={18} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-display text-sm font-semibold text-white">
+                      Add your ImgBB API key to enable uploads
+                    </p>
+                    <p className="mt-0.5 text-xs text-white/45">
+                      Your personal key is free at api.imgbb.com — save it from
+                      Settings.
+                    </p>
+                  </div>
+                  <Link
+                    href="/settings"
+                    className="bg-sky hover:bg-sky/90 rounded-full px-4 py-1.5 text-sm font-semibold text-white transition">
+                    Open Settings
+                  </Link>
+                </div>
+              )}
+
+              {/* Centered drag & drop card while the account has no photos yet. */}
+              {imagesLoaded && ownImages.length === 0 && (
+                <UploadSection
+                  onUploaded={handleUploaded}
+                  onError={handleError}
+                  disabled={!hasImgbbKey}
+                />
+              )}
+
+              {/* Timeline Photo Grid */}
+              <AstroTimelineGrid
+                images={displayedImages}
+                onSelectImage={setSelectedIndex}
+                onToggleFavorite={handleToggleFavorite}
+                isSelectMode={isSelectMode}
+                selectedIds={selectedIds}
+                onToggleSelectItem={handleToggleSelectItem}
+                onSelectGroup={handleSelectGroup}
+                gridDensity={gridDensity}
+                timeFilter={timeFilter}
+                searchQuery={searchQuery}
+              />
+            </>
+          }
+        </main>
+
+        {/* Bottom Status Bar */}
+        <AstroBottomStatusBar
+          totalCount={allImages.length}
+          totalSizeBytes={totalBytes}
+          syncedCount={displayedImages.length}
+        />
+      </div>
+
+      {/* Lightbox / Slideshow / Photo Inspector */}
+      {selectedIndex !== null && displayedImages[selectedIndex] && (
+        <Lightbox
+          images={displayedImages}
+          index={selectedIndex}
+          onClose={() => setSelectedIndex(null)}
+          onNavigate={setSelectedIndex}
+          onDelete={handleDelete}
+          onUpdateImage={handleUpdateImage}
         />
       )}
-
-      {/* Main Gallery Area */}
-      <section className="min-w-0 flex-1 space-y-6">
-        {/* Header Indicator for Favorites or Selected Album */}
-        {currentView.type === "favorites" && (
-          <div className="border-border/50 flex items-center justify-between border-b pb-3">
-            <div className="flex items-center gap-2.5">
-              <span className="grid size-8 place-items-center rounded-lg bg-rose-500/15 text-rose-500">
-                <Heart
-                  size={18}
-                  className="fill-rose-500"
-                />
-              </span>
-              <div>
-                <h2 className="font-display text-foreground text-lg font-bold">
-                  Favorites
-                </h2>
-                <p className="text-muted-foreground text-xs">
-                  {displayedImages.length}{" "}
-                  {displayedImages.length === 1 ? "photo" : "photos"}
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setCurrentView({ type: "all" })}
-              className="text-sky cursor-pointer text-xs font-medium hover:underline">
-              View all photos
-            </button>
-          </div>
-        )}
-
-        {currentView.type === "album" && (
-          <div className="border-border/50 flex items-center justify-between border-b pb-3">
-            <div className="flex items-center gap-2.5">
-              <span className="grid size-8 place-items-center rounded-lg bg-amber-500/15 text-amber-400">
-                <Folder size={18} />
-              </span>
-              <div>
-                <h2 className="font-display text-foreground text-lg font-bold">
-                  {currentView.name}
-                </h2>
-                <p className="text-muted-foreground text-xs">
-                  {displayedImages.length}{" "}
-                  {displayedImages.length === 1 ? "photo" : "photos"} in album
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setCurrentView({ type: "all" })}
-              className="text-sky cursor-pointer text-xs font-medium hover:underline">
-              View all photos
-            </button>
-          </div>
-        )}
-
-        {/* Search Bar — only when logged in and the current view has photos */}
-        {userId && displayedImages.length > 0 && (
-          <SearchBar
-            value={searchQuery}
-            onChange={setSearchQuery}
-            resultCount={searchedImages.length}
-            totalCount={displayedImages.length}
-            className="max-w-2xl"
-          />
-        )}
-
-        {/* No search results message */}
-        {searchQuery &&
-          searchedImages.length === 0 &&
-          displayedImages.length > 0 && (
-            <div className="vault-card border-border/60 flex flex-col items-center gap-4 rounded-3xl border border-dashed p-10 text-center">
-              <div className="bg-sky/10 text-sky grid size-14 place-items-center rounded-full">
-                <Search size={26} />
-              </div>
-              <div>
-                <p className="font-display text-lg font-semibold">
-                  No photos match your search
-                </p>
-                <p className="text-mist mt-1 max-w-md text-sm">
-                  Try checking your spelling or use different keywords.
-                </p>
-              </div>
-            </div>
-          )}
-
-        {/* Empty State for Favorites */}
-        {currentView.type === "favorites" && displayedImages.length === 0 && (
-          <div className="vault-card border-border/60 space-y-3 rounded-3xl border border-dashed p-12 text-center">
-            <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-rose-500/10 text-rose-400">
-              <Heart
-                size={24}
-                className="fill-rose-500/50"
-              />
-            </div>
-            <p className="font-display text-foreground text-base font-semibold">
-              No favorites yet
-            </p>
-            <p className="text-muted-foreground mx-auto max-w-sm text-xs">
-              Click the heart icon on any photo in the viewer to add it to your
-              Favorites.
-            </p>
-          </div>
-        )}
-
-        {/* Empty State for Album */}
-        {currentView.type === "album" && displayedImages.length === 0 && (
-          <div className="vault-card border-border/60 space-y-3 rounded-3xl border border-dashed p-12 text-center">
-            <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-amber-500/10 text-amber-400">
-              <Folder size={24} />
-            </div>
-            <p className="font-display text-foreground text-base font-semibold">
-              Album is empty
-            </p>
-            <p className="text-muted-foreground mx-auto max-w-sm text-xs">
-              Open any photo and click &ldquo;Add to Album&rdquo; to add it to
-              &ldquo;{currentView.name}&rdquo;.
-            </p>
-          </div>
-        )}
-
-        {/* Centered drag-and-drop card ONLY when user has 0 photos in account.
-            imagesLoaded prevents it flashing before the fetch completes. */}
-        {currentView.type === "all" && !authLoading && imagesLoaded && visibleImages.length === 0 && (
-          <UploadSection
-            onUploaded={handleUploaded}
-            onError={handleError}
-            disabled={authLoading ? true : !user || !hasImgbbKey}
-          />
-        )}
-
-        {!authLoading && !user && (
-          <div className="vault-card flex flex-wrap items-center gap-3 rounded-2xl p-4 text-sm sm:p-6">
-            <span className="bg-sky/15 text-sky ring-line-subtle grid size-10 shrink-0 place-items-center rounded-full ring-1">
-              <Lock
-                size={18}
-                aria-hidden
-              />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="font-display text-base font-semibold">
-                Log in to see your photos
-              </p>
-              <p className="text-mist mt-0.5 text-sm">
-                Your gallery is private — each account only sees its own
-                uploads. Log in or create an account to continue.
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <a
-                href="/login"
-                className="bg-foreground/[0.04] ring-line-subtle hover:bg-foreground/[0.09] rounded-full px-4 py-1.5 text-sm font-medium ring-1 transition">
-                Log in
-              </a>
-              <a
-                href="/signup"
-                className="bg-sky hover:bg-sky/90 rounded-full px-4 py-1.5 text-sm font-semibold text-white transition">
-                Sign up
-              </a>
-            </div>
-          </div>
-        )}
-
-        {!authLoading && user && !hasImgbbKey && (
-          <div className="vault-card flex flex-wrap items-center gap-3 rounded-2xl p-4 text-sm sm:p-6">
-            <span className="ring-line-subtle grid size-10 shrink-0 place-items-center rounded-full bg-amber-500/10 text-amber-500 ring-1">
-              <KeyRound
-                size={18}
-                aria-hidden
-              />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="font-display text-base font-semibold">
-                Add your ImgBB API key to enable uploads
-              </p>
-              <p className="text-mist mt-0.5 text-sm">
-                Save your personal key — open Settings from your account menu.
-                It is free at api.imgbb.com.
-              </p>
-            </div>
-            <a
-              href="/settings"
-              className="bg-sky hover:bg-sky/90 rounded-full px-4 py-1.5 text-sm font-semibold text-white transition">
-              Open Settings
-            </a>
-          </div>
-        )}
-
-        <ImageGrid
-          images={searchedImages}
-          onSelectImage={setSelectedIndex}
-        />
-
-        {userId && selectedIndex !== null && searchedImages.length > 0 && (
-          <Lightbox
-            images={searchedImages}
-            index={selectedIndex}
-            onClose={() => setSelectedIndex(null)}
-            onNavigate={setSelectedIndex}
-            onDelete={handleDelete}
-            onUpdateImage={(updated) => {
-              setAllImages((previous) =>
-                previous.map((item) =>
-                  item.id === updated.id ? updated : item,
-                ),
-              );
-            }}
-          />
-        )}
-      </section>
     </div>
   );
 };
