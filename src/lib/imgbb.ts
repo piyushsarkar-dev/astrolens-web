@@ -118,7 +118,13 @@ export async function uploadImageToImgbb(
   }
 
   const formData = new FormData();
-  formData.append("image", file.buffer.toString("base64"));
+  // Upload raw binary Blob directly instead of Base64 string to avoid +33% size inflation
+  // and prevent exceeding ImgBB's 32 MB limit on larger images (e.g. 20MB - 32MB).
+  const filename = file.name || "image.jpg";
+  const blob = new Blob([new Uint8Array(file.buffer)], {
+    type: file.mime || "image/jpeg",
+  });
+  formData.append("image", blob, filename);
   if (file.name) {
     formData.append("name", file.name.replace(/\.[^.]+$/, ""));
   }
@@ -128,12 +134,13 @@ export async function uploadImageToImgbb(
     { method: "POST", body: formData },
   );
 
-  let json: ImgbbUploadResponse;
+  const rawText = await response.text();
+  let json: ImgbbUploadResponse | null = null;
   try {
-    json = (await response.json()) as ImgbbUploadResponse;
+    json = JSON.parse(rawText) as ImgbbUploadResponse;
   } catch {
     throw new Error(
-      `ImgBB returned an invalid response (HTTP ${response.status}).`,
+      `ImgBB returned an invalid response (HTTP ${response.status}): ${rawText.slice(0, 160)}`,
     );
   }
 

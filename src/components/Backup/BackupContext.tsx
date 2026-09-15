@@ -248,6 +248,24 @@ export const BackupProvider = ({ children }: { children: React.ReactNode }) => {
         let isItemDone = false;
         let tickerInterval: NodeJS.Timeout | null = null;
 
+        if (currentItem.size > 32 * 1024 * 1024) {
+          accumulatedBytesCompleted += currentItem.size;
+          setQueue((prev) =>
+            prev.map((item, idx) =>
+              idx === i
+                ? {
+                    ...item,
+                    status: "error",
+                    progress: 0,
+                    error: "Image exceeds the 32 MB limit allowed by ImgBB.",
+                  }
+                : item,
+            ),
+          );
+          void removeStoredItem(currentItem.id);
+          continue;
+        }
+
         try {
           const uploadedRecord = await new Promise<ImageRecord>(
             (resolve, reject) => {

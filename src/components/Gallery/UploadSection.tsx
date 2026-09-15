@@ -35,6 +35,14 @@ const UploadSection = ({
         return;
       }
 
+      const oversized = selected.filter((file) => file.size > 32 * 1024 * 1024);
+      if (oversized.length > 0) {
+        onError(
+          `Some images exceed the 32 MB limit (${oversized.map((f) => f.name).join(", ")}). Please choose images up to 32 MB.`,
+        );
+        return;
+      }
+
       startBackup(selected, (image) => {
         onUploaded([image]);
       });
@@ -111,7 +119,7 @@ const UploadSection = ({
               : "Drag & drop photos here, or click to browse"}
           </p>
           <p className="text-muted-foreground text-xs leading-relaxed sm:text-sm">
-            Upload up to {MAX_UPLOAD_COUNT} photos at once · images are stored on ImgBB via your API key
+            Upload up to {MAX_UPLOAD_COUNT} photos at once (up to 32 MB each) · stored on ImgBB via your API key
           </p>
         </div>
 

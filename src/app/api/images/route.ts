@@ -11,7 +11,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { ImageRecord } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 300; // 5 minutes to support large uploads up to 32 MB
 
 const ALLOWED_IMAGE_MIME_TYPES = new Set([
   "image/jpeg",
