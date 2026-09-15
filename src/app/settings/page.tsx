@@ -344,12 +344,13 @@ const SettingsPage = () => {
               {COLOR_PRESETS.map((p) => {
                 const isActive = preset === p.id;
                 const accent = theme === "dark" ? p.accentHex : p.accentHexLight;
+                const bgPreview = theme === "dark" ? p.previewBgDark : p.previewBgLight;
                 return (
                   <button
                     key={p.id}
                     type="button"
                     onClick={() => handleSelectPreset(p.id)}
-                    className={`group relative flex flex-col items-start gap-1.5 rounded-xl p-2.5 text-left transition ring-1 ${
+                    className={`group relative flex flex-col items-start gap-2 rounded-xl p-2.5 text-left transition ring-1 ${
                       isActive
                         ? "bg-vault-high ring-2"
                         : "bg-vault-lowest ring-line-subtle hover:bg-vault-low"
@@ -359,10 +360,18 @@ const SettingsPage = () => {
                     }}
                   >
                     <div className="flex w-full items-center justify-between">
-                      <span
-                        className="h-5 w-5 rounded-full ring-1 ring-black/20 shadow-sm"
-                        style={{ backgroundColor: accent }}
-                      />
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className="h-4 w-4 rounded-full ring-1 ring-black/20 shadow-sm"
+                          style={{ backgroundColor: bgPreview }}
+                          title="Background tone"
+                        />
+                        <span
+                          className="h-4 w-4 rounded-full ring-1 ring-black/20 shadow-sm"
+                          style={{ backgroundColor: accent }}
+                          title="Accent color"
+                        />
+                      </div>
                       {isActive && <Check size={14} style={{ color: accent }} />}
                     </div>
                     <span className="truncate text-xs font-medium">{p.name}</span>
